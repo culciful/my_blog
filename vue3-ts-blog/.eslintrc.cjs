@@ -29,6 +29,7 @@ module.exports = {
     "quote-props": ["error", "consistent"],
     "spaced-comment": ["error", "always",  { "exceptions": ["-+*"] }],
     "space-infix-ops": ["error", { "int32Hint": false }],
-    quotes: ["error", "single"]
+    quotes: ["error", "single"],
+    indent: ["error", 4, { "ignoredNodes": ["ConditionalExpression"]}]
   }
 }

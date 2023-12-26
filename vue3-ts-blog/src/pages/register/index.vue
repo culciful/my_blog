@@ -23,11 +23,6 @@
                 <el-button class="a-w-f" type="primary" round @click="onSubmit">{{$t('label.register')}}</el-button>
             </el-form-item>
         </el-form>
-        <div class="register-btn">
-            <el-button link type="primary" @click="gotoRegister">{{$t('label.register')}}
-                <el-icon class="a-ml-xxs"><Right /></el-icon>
-            </el-button>
-        </div>
     </div>
 </div>
 </template>
@@ -72,11 +67,5 @@ const gotoRegister = () => {
     height: 600px;
     background-color: $white;
     border-radius: 12px;
-}
-
-.register-btn {
-    position: absolute;
-    right: 40px;
-    bottom: 40px;
 }
 </style>

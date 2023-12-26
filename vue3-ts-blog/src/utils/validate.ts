@@ -10,22 +10,3 @@ export const regExps = {
     enabledChar: /^[a-zA-Z\d~!@#$%^&*()_ +^\-={}:";'<>?,./]*$/
 };
 
-/*
-const validatePass = (rule: any, value: any, callback: any) => {
-    if (!regExps.enabledChar.test(value)) {
-        callback(new Error(t('inputMessage.passwordFormat')));
-    }
-    callback();
-};
-
-export const validators = {
-    username: [
-        { required: true, message: t("inputMessage.inputUsername"), trigger: 'blur' },
-        { min: 4, max: 16, message: t("inputMessage.usernameFormat"), trigger: 'blur' },
-    ],
-    password: [
-        {required: true, message: t("inputMessage.inputPassword"), trigger: 'change',},
-        { min: 6, max: 32, message: t("inputMessage.passwordFormat"), trigger: 'blur' },
-        { validator: validatePass, trigger: 'blur' }
-    ]
-};*/

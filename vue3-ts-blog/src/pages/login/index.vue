@@ -44,12 +44,14 @@ import TranslateIcon from '@/components/translateIcon/index.vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import {regExps} from '@/utils/validate';
+import { useRouter } from 'vue-router';
 
 interface LoginForm {
     username: string,
     password: string
 }
 const { t } = useI18n();
+const router = useRouter();
 const { proxy }: any = getCurrentInstance();
 const loginFormRef = ref<FormInstance>();
 const loginForm = reactive<LoginForm>({
@@ -96,6 +98,7 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
 
 const gotoRegister = () => {
     console.log('gotoRegister');
+    router.push({ path: '/register' });
 };
 
 </script>

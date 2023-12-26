@@ -7,8 +7,8 @@ import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 import SvgIcon from './components/svgIcon/index.vue';
-import {i18n} from "@/language/i18n";
-import request from "@/utils/request";
+import {i18n} from '@/language/i18n';
+import request from '@/utils/request';
 
 const pinia = createPinia();
 const app = createApp(App);

@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts" name="SvgIcon">
-import { computed } from "vue";
+import { computed } from 'vue';
 const props = defineProps({
     name: {
         type: String,
@@ -17,7 +17,7 @@ const props = defineProps({
     },
     color: {
         type: String,
-        default: "",
+        default: '',
     },
     size: {
         type: String,
@@ -26,7 +26,7 @@ const props = defineProps({
 const iconName = computed(() => `#icon-${props.name}`);
 const svgClass = computed(() => {
     if (props.name) return `svg-icon icon-${props.name}`;
-    return "svg-icon";
+    return 'svg-icon';
 });
 </script>
 
