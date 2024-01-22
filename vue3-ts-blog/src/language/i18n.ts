@@ -1,31 +1,36 @@
-import {createI18n} from "vue-i18n";
+import {createI18n} from 'vue-i18n';
+import {LANG} from '@/utils/localStoreItem';
 import en from './en';
 import zh from './zh';
 
 export const messages = {
-    en,
-    zh
+    'zh-CN': zh,
+    'en-US': en
 };
 
 export const languageOptions = {
-    zh: '简体中文',
-    en: 'English'
+    'zh-CN': '简体中文',
+    'en-US': 'English'
 };
-const defaultLanguage = 'zh';
+
+export const defaultLanguage = 'zh-CN';
 
 const getLocale = () => {
-    let locale: string | null = localStorage.getItem('locale');
+    let locale: string | null = localStorage.getItem(LANG);
     if(locale == null) {
         locale = defaultLanguage;
-        localStorage.setItem('lang', locale);
+        localStorage.setItem(LANG, locale);
     }
+    document.documentElement.lang = locale;
     return locale;
 };
 
-export const i18n = createI18n({
+const i18n = createI18n({
     /* 支持 composition Api使用 t */
     legacy: false,
     allowComposition: true,
+    globalInjection: true,
     locale: getLocale(),
     messages
 });
+export default i18n;

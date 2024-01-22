@@ -4,7 +4,8 @@
  * encode true/false 是否进行URL编码,默认为true
  * return URL参数字符串
  */
-export const urlEncode = function (param, key, encode) {
+
+const urlEncode = function (param, key, encode) {
     if ( param === null) return '';
     let paramStr = '';
     const t = typeof (param);
@@ -17,4 +18,58 @@ export const urlEncode = function (param, key, encode) {
         }
     }
     return paramStr;
+};
+
+function addUnit(value, defaultUnit = 'px') {
+    if (!value)
+        return '';
+    if (isNumber(value) || isStringNumber(value)) {
+        return `${value}${defaultUnit}`;
+    } else if (isString(value)) {
+        return value;
+    }
+}
+
+const isNumber = (val) => typeof val === 'number';
+const isString = (val) => typeof val === 'string';
+
+const isStringNumber = (val) => {
+    if (!isString(val)) {
+        return false;
+    }
+    return !Number.isNaN(Number(val));
+};
+
+const transferTimestamp = (val: number, formatVal: string = 'yyyy-MM-dd hh:mm') => {
+    return new Date(val * 1000).format(formatVal);
+};
+
+const setReactiveData = (to, from) => {
+    if(from == null) return;
+    const props = Object.keys(from);
+    props.forEach(prop => {
+        to[prop] = from[prop];
+    });
+};
+
+const deepCopy = (source) => {
+    if(typeof source !== 'object' || source == null) {
+        return source;
+    }
+    const result = Array.isArray(source) ? [] : {};
+    for(const key in source) {
+        result[key] = deepCopy(source[key]);
+    }
+    return result;
+};
+
+export {
+    urlEncode,
+    isNumber,
+    isString,
+    isStringNumber,
+    addUnit,
+    transferTimestamp,
+    setReactiveData,
+    deepCopy
 };

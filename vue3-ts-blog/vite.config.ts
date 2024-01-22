@@ -1,10 +1,12 @@
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { createSvg } from './src/utils/svgIcon.ts';
+import { insertSvg } from './src/utils/insertSvg.ts';
 import { mockServer } from './src/utils/mockServer.ts';
+/* 允许setup内设置组件name */
 import vueSetupExtend from 'unplugin-vue-setup-extend-plus/vite';
 import fs from 'fs';
+import {prismjsPlugin} from 'vite-plugin-prismjs';
 
 const mockFilePath = 'mock.ts';
 if(!fs.existsSync(mockFilePath)) {
@@ -17,8 +19,26 @@ if(!fs.existsSync(mockFilePath)) {
 
 const plugins = [
     vue(),
-    createSvg('./src/assets/img/icons/'),
+    insertSvg(),
     vueSetupExtend({ /* options */ }),
+    prismjsPlugin({
+        languages: [
+            'json',
+            'html',
+            'css',
+            'js',
+            'ts',
+            'powershell',
+            'java',
+            'sass',
+            'sql',
+            'vim',
+            'git',
+            'yaml',
+            'cpp',
+            'c'
+        ]
+    })
 ];
 const mockConfig = require('./mock');
 if(mockConfig.default.useMock && process.env.NODE_ENV !== 'production') plugins.push(mockServer());
@@ -33,7 +53,7 @@ export default defineConfig({
     css: {
         preprocessorOptions: {
             scss: {
-                additionalData: '@import "@/style/mixin.scss";'
+                additionalData: '@import "@/style/_mixin.scss";'
             }
         }
     }

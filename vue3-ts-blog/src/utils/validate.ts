@@ -1,12 +1,32 @@
-// import { useI18n } from 'vue-i18n';
-// const { t } = useI18n();
-//  t 只能在setup中使用
+import i18n from '@/language/i18n';
 
-export const regExps = {
-    // 以字母或下划线开头，包含字母、数字、以及下划线 4-12位
-    username1: /^[a-zA-Z_]([a-zA-Z0-9_]+){3,12}$/,
-    // 密码至少1个字母，1个数字和1个特殊字符
-    password1: /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[~!@#$%^&*()_ +^\-={}:";'<>?,./])[A-Za-z\d~!@#$%^&*()_ +^\-={}:";'<>?,./]{6,32}$/,
-    enabledChar: /^[a-zA-Z\d~!@#$%^&*()_ +^\-={}:";'<>?,./]*$/
+const { t } = i18n.global as any;
+
+export const patterns = {
+    enabledStr: /^[a-zA-Z0-9\u4E00-\u9FA5~!@#$%^&*()_+|}{[\]\\/?><:"`;.,'-][a-zA-Z0-9\u4E00-\u9FA5 ~!@#$%^&*()_+|}{[\]\\/?><:"`;.,'-]*$/,
+    // 1-64位 包含汉字数字字母特殊字符
+    username: /^[a-zA-Z0-9\u4E00-\u9FA5~!@#$%^&*()_+|}{[\]\\/?><:"`;.,'-][a-zA-Z0-9\u4E00-\u9FA5 ~!@#$%^&*()_+|}{[\]\\/?><:"`;.,'-]{0,63}$/,
+    // Minimum 6 and maximum 64 characters, at least one letter,
+    password: /^(?=.*[a-zA-Z])[A-Za-z\d~!@#$%^&*()_+|}{[\]\\/?><:"`;.,'-]{6,64}$/,
+    email: /[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\w](?:[\w-]*[\w])?\.)+[\w](?:[\w-]*[\w])?/
 };
 
+export const globalRules = {
+    username: [
+        { required: true, message: t('inputMessage.usernameFormat'), trigger: 'change' },
+        { min: 1, max: 16, message: t('inputMessage.usernameFormat'), trigger: 'blur' },
+        { pattern: patterns.username, message: t('inputMessage.usernameFormat'), trigger: 'blur' }
+    ],
+    password: [
+        {required: true, message: t('inputMessage.passwordFormat'), trigger: 'change'},
+        { min: 6, max: 32, message: t('inputMessage.passwordFormat'), trigger: 'blur' },
+        { pattern: patterns.password, message: t('inputMessage.passwordFormat'), trigger: 'blur' }
+    ],
+    email: [
+        { required: true, message: t('inputMessage.inputEmail'), trigger: 'change' },
+        {pattern: patterns.email, message: t('inputMessage.emailFormat'), trigger: 'blur'}
+    ],
+    required: [
+        { required: true, message: t('inputMessage.invalidInput'), trigger: 'change'}
+    ]
+};

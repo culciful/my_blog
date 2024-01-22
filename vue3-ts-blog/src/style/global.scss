@@ -1,17 +1,265 @@
 @import "reset";
 @import "mixin";
-#app, .a-full {
+
+html {
+    height: 100%;
+}
+body {
+    width: 100%;
+    min-width: 320px;
+    height: 100%;
+    font-family: $--font-family-base;
+    letter-spacing: .2px;
+    line-height: 24px;
+    font-size: 16px;
+    font-weight: 400;
+    color: $--text-color;
+    //background-color: $--color-white;
+    direction: ltr;
+    transition: color .5s,background-color .5s;
+    overflow-wrap: break-word;
+}
+#app {
+    height: 100%;
+}
+
+[class*=language-] pre, [class*=language-] code {
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    tab-size: 4;
+    hyphens: none;
+}
+
+[class*=language-] code {
+    padding: 0;
+    line-height: $--code-line-height;
+    font-size: $--code-font-size;
+    color: $--code-text-color;
+}
+
+pre code {
+    background-color: transparent;
+}
+
+code {
+    margin: 0;
+    border-radius: 4px;
+    font-family: $--code-font-family;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: $--text-color-regular;
+}
+
+.a-full {
     width: 100%;
     height: 100%;
 }
 .a-w-f {
     width: 100%;
 }
+.a-w-200 {
+    width: 200px !important;
+}
 .a-h-f {
     height: 100%;
 }
 
-@each $key, $value in $size {
+.a-d-b {
+    display: block;
+}
+.a-d-ib {
+    display: inline-block;
+}
+
+.a-pos-r {
+    position: relative;
+}
+.a-pos-a {
+    position: absolute;
+}
+
+.a-bs-b {
+    box-sizing: border-box;
+}
+
+.a-va-t {
+    vertical-align: top;
+}
+
+.a-ta-c {
+    text-align: center;
+}
+
+.a-ta-r {
+    text-align: right;
+}
+
+.a-c-primary {
+    color: $--color-primary;
+}
+.a-c-h-primary:hover {
+    color: $--color-primary;
+}
+.a-c-h-lighter:hover {
+    color: $--text-color-lighter;
+}
+
+.a-c-p {
+    cursor: pointer;
+}
+
+.a-font-body-1 {
+    font-size: $--font-size-base;
+    font-weight: 400;
+    line-height: 24px;
+    color: $--text-color;
+}
+
+.a-font-body-2 {
+    font-size: $--font-size-extra-small;
+    font-weight: 400;
+    line-height: 24px;
+    color: $--text-color-light;
+}
+
+.a-font-body-3 {
+    font-size: $--font-size-extra-small;
+    font-weight: 400;
+    line-height: 24px;
+    color: $--text-color-lighter;
+}
+
+.a-font-title-1 {
+    font-size: $--font-size-large;
+    font-weight: 600;
+    line-height: 24px;
+    color: $--text-color;
+}
+
+.a-font-label-1 {
+    font-size: $--font-size-medium;
+    line-height: 24px;
+    color: $--text-color;
+}
+
+.clearfix:after, .clearfix:before {
+    visibility: hidden;
+    display: block;
+    height: 0;
+    font-size: 0;
+    content: '';
+    clear: both
+}
+
+.ellipsis {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-wrap: normal
+}
+
+.multi-line-ellipsis {
+    overflow: hidden;
+    position: relative;
+    line-height: 1.2em;
+    max-height: 3.6em;
+    text-align: justify;
+    padding-right: 0
+}
+
+.multi-line-ellipsis:before {
+    content: "...";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    background: #fff
+}
+
+.multi-line-ellipsis:after {
+    content: "";
+    position: absolute;
+    right: 0;
+    width: 1em;
+    height: 1em;
+    margin-top: .2em;
+    background: #fff
+}
+
+.hide-text {
+    font-size: 0;
+    text-shadow: none;
+    color: transparent
+}
+
+.center-tl {
+    position: relative
+}
+
+.center-tl>.inner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%)
+}
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.span-label {
+    display: inline-flex;
+    align-items: center;
+}
+
+.inline-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    font-size: $--font-size-base;
+    & > span {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 24px;
+        color: $--text-color;
+        i {
+            margin-right: 4px;
+        }
+    }
+    .clickable:hover {
+        color: $--text-color-lighter;
+        cursor: pointer;
+    }
+}
+
+@media (max-width: 800px) {
+    .inline-container > span {
+        margin-right: 8px;
+    }
+}
+
+.a-pt-header {
+    padding-top: $--nav-height;
+}
+
+.a-bg-gray {
+    background: $--bg-color-soft;
+}
+
+@each $key, $value in $margin-size {
     .a-p-#{$key} {
         padding: #{$value};
     }
@@ -73,181 +321,16 @@
     }
 }
 
-.a-ta-c {
-    text-align: center;
-}
-.a-bs-b {
-    box-sizing: border-box;
-}
-.a-va-t {
-    vertical-align: top;
-}
-
-.a-c-primary {
-    color: $color-primary;
-}
-
-.a-font-display2 {
-    font-size: 48px;
-    line-height: 68px
-}
-
-.a-font-display1 {
-    font-size: 36px;
-    line-height: 54px
-}
-
-.a-container h1,.a-font-headline {
-    font-size: 24px;
-    line-height: 36px;
-    font-weight: 400
-}
-
-.a-container h2,.a-font-base-title-2 {
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 30px
-}
-
-.a-container h3,.a-font-base-title-1 {
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 24px
-}
-
-.a-container h4,.a-font-subhead {
-    color: #73777a;
-    margin-bottom: 0;
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 24px
-}
-
-.a-font-body-3 {
-    font-size: 14px;
-    line-height: 24px;
-    font-weight: 700
-}
-
-.a-font-body-1,.a-font-body-2,p {
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 24px
-}
-
-.a-font-body-1 {
-    color: #73777a
-}
-
-.a-font-caption {
-    font-size: 12px;
-    color: #9b9ea0
-}
-
-.clearfix:after {
-    visibility: hidden;
-    display: block;
-    height: 0;
-    font-size: 0;
-    content: " ";
-    clear: both
-}
-
-.ellipsis {
-    display: inline-block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    word-wrap: normal
-}
-
-.multi-line-ellipsis {
-    overflow: hidden;
-    position: relative;
-    line-height: 1.2em;
-    max-height: 3.6em;
-    text-align: justify;
-    padding-right: 0
-}
-
-.multi-line-ellipsis:before {
-    content: "...";
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    background: #fff
-}
-
-.multi-line-ellipsis:after {
-    content: "";
-    position: absolute;
-    right: 0;
-    width: 1em;
-    height: 1em;
-    margin-top: .2em;
-    background: #fff
-}
-
-.hide-text {
-    font-size: 0;
-    text-shadow: none;
-    color: transparent
-}
-
-.center-tl {
-    position: relative
-}
-
-.center-tl>.inner {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%)
-}
-
-.center-td {
-    text-align: center;
-    display: table
-}
-
-.center-td>.inner {
-    display: table-cell;
-    vertical-align: middle
-}
-
-.a-container {
-    margin-right: auto;
-    margin-left: auto;
-    min-width: 100%
-}
-
-.a-container,.a-container.gutter-20 {
-    padding-right: 10px;
-    padding-left: 10px
-}
-
-@media (min-width: 769px) {
-    .a-container {
-        min-width:1000px
+@each $key, $value in $orientation {
+    .a-b#{$key}-base {
+        border-#{$value}: $--border;
+    }
+    .a-b#{$key}-lighter {
+        border-#{$value}: $--border-width $--border-style  $--border-color-lighter;
     }
 }
 
-@media (min-width: 1000px) {
-    .a-container {
-        min-width:100%
-    }
-}
-
-@media (min-width: 1200px) {
-    .a-container {
-        min-width:1200px;
-        max-width: 1200px
-    }
-}
-
-.a-container-fluid {
-    width: 100%;
-    margin-right: auto;
-    margin-left: auto
+/* 解决el-dropdown获取到焦点或点击出现黑边情况 */
+.el-tooltip__trigger:focus {
+    outline: none;
 }

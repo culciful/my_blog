@@ -30,6 +30,9 @@ module.exports = {
     "spaced-comment": ["error", "always",  { "exceptions": ["-+*"] }],
     "space-infix-ops": ["error", { "int32Hint": false }],
     quotes: ["error", "single"],
-    indent: ["error", 4, { "ignoredNodes": ["ConditionalExpression"]}]
+    indent: ["error", 4, { "ignoredNodes": ["ConditionalExpression"]}],
+    "comma-spacing": ["error", { "before": false, "after": true }],
+    "arrow-spacing": "error",
+    "comma-dangle": ["error", "never"]
   }
 }

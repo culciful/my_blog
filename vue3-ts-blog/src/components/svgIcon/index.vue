@@ -1,15 +1,14 @@
 <template>
-<svg
-    :class="svgClass"
-    v-bind="$attrs"
-    :style="{ color: color, fontSize: size }"
->
-    <use :href="iconName"></use>
-</svg>
+<i v-bind="$attrs" :style="{ color: color, fontSize: addUnit(size)}" :class="svgClass">
+    <svg class="svg-icon">
+        <use :href="iconName"></use>
+    </svg>
+</i>
 </template>
 
 <script setup lang="ts" name="SvgIcon">
 import { computed } from 'vue';
+import {addUnit} from '@/utils/utils';
 const props = defineProps({
     name: {
         type: String,
@@ -20,21 +19,21 @@ const props = defineProps({
         default: '',
     },
     size: {
-        type: String,
+        type: [Number, String],
     },
 });
+
 const iconName = computed(() => `#icon-${props.name}`);
-const svgClass = computed(() => {
-    if (props.name) return `svg-icon icon-${props.name}`;
-    return 'svg-icon';
-});
+const svgClass = computed(() => `icon-${props.name}`);
 </script>
 
 <style scoped>
+i {
+    display: inline-flex;
+    align-items: center;
+}
 .svg-icon {
     width: 1em;
     height: 1em;
-    fill: currentColor;
-    vertical-align: middle;
 }
 </style>
