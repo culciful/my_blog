@@ -7,7 +7,7 @@ const key = new JSEncrypt();
 let hasKey = false;
 
 function getKey() {
-    return request.post(Constant.url.getConf).then(res => {
+    return request.get(Constant.url.getConf).then(res => {
         hasKey = true;
         key.setPublicKey(templateKey.replace('{key}', res.result.data));
     });

@@ -2,8 +2,9 @@
   "errorCode": 0,
   "result": {
     "id": 1,
-    "username": "culciful",
+    "username": "张三",
     "avatarUrl": "/static/img/favicon.ico",
-    "createTime": 1704034129
+    "createTime": 1704034129,
+    "email": "dsada.dsadsa@dsadas.com"
   }
 }

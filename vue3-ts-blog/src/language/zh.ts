@@ -100,7 +100,8 @@ export default {
         reLogin: '修改成功，请重新登录',
         avatarFormat: '图片必须为JPG、PNG等格式',
         avatarSize: '图片大小不能超过2MB',
-        confirmUnfollow: '确定要取消关注{name}吗'
+        confirmUnfollow: '确定要取消关注{name}吗?',
+        emailRegistered: '邮箱已注册'
     },
     errorCode: {
         '-10000': '网络错误',

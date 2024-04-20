@@ -20,13 +20,37 @@ import VueMarkdownEditor from '@kangc/v-md-editor';
 import '@kangc/v-md-editor/lib/style/base-editor.css';
 import vuepressTheme from '@kangc/v-md-editor/lib/theme/vuepress.js';
 import '@kangc/v-md-editor/lib/theme/style/vuepress.css';
+import createEmojiPlugin from '@kangc/v-md-editor/lib/plugins/emoji/index';
+import '@kangc/v-md-editor/lib/plugins/emoji/emoji.css';
+import createKatexPlugin from '@kangc/v-md-editor/lib/plugins/katex/cdn';
+import createMermaidPlugin from '@kangc/v-md-editor/lib/plugins/mermaid/cdn';
+import '@kangc/v-md-editor/lib/plugins/mermaid/mermaid.css';
+import createTodoListPlugin from '@kangc/v-md-editor/lib/plugins/todo-list/index';
+import '@kangc/v-md-editor/lib/plugins/todo-list/todo-list.css';
+import createLineNumberPlugin from '@kangc/v-md-editor/lib/plugins/line-number/index';
+import createHighlightLinesPlugin from '@kangc/v-md-editor/lib/plugins/highlight-lines/index';
+import '@kangc/v-md-editor/lib/plugins/highlight-lines/highlight-lines.css';
+import createCopyCodePlugin from '@kangc/v-md-editor/lib/plugins/copy-code/index';
+import '@kangc/v-md-editor/lib/plugins/copy-code/copy-code.css';
+import createAlignPlugin from '@kangc/v-md-editor/lib/plugins/align';
 import Prism from 'prismjs';
 import enUS from '@kangc/v-md-editor/lib/lang/en-US';
 
 const lang = localStorage.getItem(LANG);
 VueMarkdownEditor.use(vuepressTheme, {
-    Prism,
+    codeHighlightExtensionMap: {
+        vue: 'html'
+    },
+    Prism
 });
+VueMarkdownEditor.use(createEmojiPlugin());
+VueMarkdownEditor.use(createKatexPlugin());
+VueMarkdownEditor.use(createMermaidPlugin());
+VueMarkdownEditor.use(createTodoListPlugin());
+VueMarkdownEditor.use(createLineNumberPlugin());
+VueMarkdownEditor.use(createHighlightLinesPlugin());
+VueMarkdownEditor.use(createCopyCodePlugin());
+VueMarkdownEditor.use(createAlignPlugin());
 if(lang !== defaultLanguage) {
     VueMarkdownEditor.lang.use('en-US', enUS);
 }

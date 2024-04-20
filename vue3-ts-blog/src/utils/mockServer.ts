@@ -21,7 +21,7 @@ export const mockServer = () => ({
     configureServer(server) {
         server.middlewares.use((req, res, next) => {
             // 自定义请求处理...
-            const type = req.headers['content-type'];
+            const type = req.headers['accept'];
             if(jsonContentType.test(type)) {
                 const pathname = req.url.split('?')[0];
                 const json = getJsonFile(pathname);
@@ -32,5 +32,5 @@ export const mockServer = () => ({
                 next();
             }
         });
-    },
+    }
 });

@@ -1,0 +1,48 @@
+.login {
+  min-height: 720px;
+}
+
+.bg {
+  background-image: url("/static/img/bg.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.3;
+  filter: blur(3px);
+}
+.icon-translation {
+  position: absolute;
+  right: 24px;
+  top: 24px;
+}
+.logo-img {
+  height: 40px;
+  margin: 64px auto 0;
+}
+
+.login-box {
+  width: 400px;
+  height: 600px;
+  background-color: $--color-white;
+  border-radius: 12px;
+}
+
+@media (max-width: 500px) {
+  .login-box {
+    width: 300px;
+    height: 500px;
+  }
+  .login {
+    min-height: 600px;
+  }
+}
+
+.verification-code {
+  .el-input {
+    width: calc(100% - 98px);
+  }
+  .el-button {
+    margin-left: 8px;
+    width: 90px;
+  }
+}

@@ -100,7 +100,8 @@ export default {
         reLogin: 'Modification successful, please log in again',
         avatarFormat: 'Avatar picture must be JPG/PNG format!',
         avatarSize: 'Avatar picture size can not exceed 2MB!',
-        confirmUnfollow: 'Unfollow {name}?'
+        confirmUnfollow: 'Unfollow {name}?',
+        emailRegistered: 'Email is registered.'
     },
     errorCode: {
         '-10000': 'Network Error',

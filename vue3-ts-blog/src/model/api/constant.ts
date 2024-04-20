@@ -4,13 +4,11 @@ const makeUrl = (str) => {
 };
 
 const urlMap = {
-    getTags: 'getTags',
-    getConf: 'getConf',
+    getConf: 'getConf'
 };
 
 export default {
     url: {
-        getTags: makeUrl(urlMap.getTags),
-        getConf: makeUrl(urlMap.getConf),
-    },
+        getConf: makeUrl(urlMap.getConf)
+    }
 };

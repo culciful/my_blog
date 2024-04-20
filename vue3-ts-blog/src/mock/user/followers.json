@@ -1,0 +1,24 @@
+{
+  "errorCode": 0,
+  "result": {
+    "list": [
+      {
+        "id": 1,
+        "username": "张三",
+        "avatarUrl": "/static/img/favicon.ico",
+        "createTime": 1704034129,
+        "email": "dsada.dsadsa@dsadas.com",
+        "mutual": true
+      },
+      {
+        "id": 2,
+        "username": "李四",
+        "avatarUrl": "/static/img/favicon.ico",
+        "createTime": 1704034129,
+        "email": "dsada.dsadsa@dsadas.com",
+        "mutual": false
+      }
+    ],
+    "total": 33
+  }
+}
