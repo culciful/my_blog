@@ -4,6 +4,7 @@ import {LOGIN_STATE} from '@/utils/localStoreItem';
  interface State {
     id: number|string,
     username: string,
+    avatarAssetId: number|string,
     avatarUrl: string
 }
 
@@ -12,6 +13,7 @@ export const useUserStore = defineStore('user', {
         return {
             id: 0,
             username: '',
+            avatarAssetId: 0,
             avatarUrl: ''
         };
     },
@@ -19,7 +21,7 @@ export const useUserStore = defineStore('user', {
         isLoggedIn: (state) => !!state.id
     },
     actions: {
-        setUserData(data) {
+        setUserData(data: Partial<State>) {
             Object.assign(this, data);
         },
         clear() {

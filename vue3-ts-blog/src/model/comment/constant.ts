@@ -1,5 +1,5 @@
 const moduleName = 'comment';
-const makeUrl = (str) => {
+const makeUrl = (str: string) => {
     return `/${moduleName}/${str}`;
 };
 
@@ -21,6 +21,7 @@ const constant =  {
     authorId: 'authorId',
     title: 'title',
     username: 'username',
+    avatarAssetId: 'avatarAssetId',
     avatarUrl: 'avatarUrl',
     articleId: 'aid',
     createTime: 'createTime',

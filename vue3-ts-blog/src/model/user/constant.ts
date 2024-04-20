@@ -2,7 +2,7 @@ import i18n from '@/language/i18n';
 
 const { t } = i18n.global as any;
 const moduleName = 'user';
-const makeUrl = (str) => {
+const makeUrl = (str: string) => {
     return `/${moduleName}/${str}`;
 };
 
@@ -53,6 +53,7 @@ const constant =  {
     userId: 'id',
     email: 'email',
     username: 'username',
+    avatarAssetId: 'avatarAssetId',
     avatarUrl: 'avatarUrl',
     password: 'password',
     packageId: 'pid',
@@ -74,16 +75,18 @@ export const defaultPackage = {
     [constant.packageName]: t('label.all')
 };
 
-export const viewUser = (router, userinfo) => {
-    if(userinfo[constant.avatarUrl]) userinfo[constant.avatarUrl] = encodeURIComponent(userinfo[constant.avatarUrl]);
+export const viewUser = (router: any, userinfo: Record<string, any>) => {
+    if(userinfo[constant.avatarUrl]) {
+        userinfo[constant.avatarUrl] = encodeURIComponent(String(userinfo[constant.avatarUrl]));
+    }
     router.push({
         name: 'viewUser',
         query: userinfo
     });
 };
 
-export const handleAvatar = (avatarUrl :string) : string => {
-    if(avatarUrl === '' || !avatarUrl) return '/static/img/user-filling.svg';
+export const handleAvatar = (avatarUrl?: string) : string => {
+    if(!avatarUrl) return '/static/img/user-filling.svg';
     return avatarUrl;
 };
 

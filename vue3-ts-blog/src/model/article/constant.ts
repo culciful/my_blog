@@ -1,5 +1,5 @@
 const moduleName = 'article';
-const makeUrl = (str) => {
+const makeUrl = (str: string) => {
     return `/${moduleName}/${str}`;
 };
 
@@ -25,6 +25,7 @@ const constant =  {
     },
     userId: 'id',
     username: 'username',
+    avatarAssetId: 'avatarAssetId',
     avatarUrl: 'avatarUrl',
     articleId: 'aid',
     title: 'title',

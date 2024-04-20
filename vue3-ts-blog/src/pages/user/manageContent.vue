@@ -200,7 +200,9 @@ onMounted(() => {
     if(isVisitMode.value) {
         userInfo[Constant.userId] = query[Constant.userId];
         userInfo[Constant.username] = query[Constant.username];
-        userInfo[Constant.avatarUrl] = decodeURIComponent(query[Constant.avatarUrl] as string);
+        if(query[Constant.avatarUrl]) {
+            userInfo[Constant.avatarUrl] = decodeURIComponent(query[Constant.avatarUrl] as string);
+        }
         if(query[Constant.packageId]) selectedPackageId.value = parseInt(query[Constant.packageId] as string);
         checkFollow();
     }
