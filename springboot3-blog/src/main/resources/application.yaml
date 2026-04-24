@@ -1,0 +1,31 @@
+# server配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# 连接池配置
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      url: jdbc:mysql:///culciful_blog
+      username: root
+      password: 123456
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+# mybatis-plus的配置
+mybatis-plus:
+  type-aliases-package: com.culciful.pojo
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted  #全局逻辑删除
+      id-type: auto #主键策略自增长
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+#jwt配置
+jwt:
+  token:
+    tokenExpiration: 216000 #有效时间,单位分钟
+    tokenSignKey: culciful_blog  #当前程序签名秘钥 自定义

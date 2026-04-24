@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.culciful.mapper.BlogMapper">
+
+    <resultMap id="BaseResultMap" type="com.culciful.pojo.Blog">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="blogId" column="blog_id" jdbcType="INTEGER"/>
+            <result property="userId" column="user_id" jdbcType="INTEGER"/>
+            <result property="title" column="title" jdbcType="VARCHAR"/>
+            <result property="overview" column="overview" jdbcType="VARCHAR"/>
+            <result property="textId" column="text_id" jdbcType="INTEGER"/>
+            <result property="viewCount" column="view_count" jdbcType="INTEGER"/>
+            <result property="commentCount" column="comment_count" jdbcType="INTEGER"/>
+            <result property="packId" column="pack_id" jdbcType="INTEGER"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,blog_id,user_id,
+        title,overview,text_id,
+        view_count,comment_count,pack_id,
+        create_time,update_time,is_deleted
+    </sql>
+</mapper>
