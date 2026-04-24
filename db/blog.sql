@@ -1,0 +1,226 @@
+DROP DATABASE IF EXISTS `culciful_blog`;
+CREATE DATABASE `culciful_blog` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+USE `culciful_blog`;
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS `blog_tag_relation`;
+DROP TABLE IF EXISTS `blog_tag`;
+DROP TABLE IF EXISTS `email_verification_code`;
+DROP TABLE IF EXISTS `blog_comment`;
+DROP TABLE IF EXISTS `blog`;
+DROP TABLE IF EXISTS `user_follow`;
+DROP TABLE IF EXISTS `user_package`;
+DROP TABLE IF EXISTS `text_body`;
+DROP TABLE IF EXISTS `file_asset`;
+DROP TABLE IF EXISTS `user_info`;
+
+CREATE TABLE `user_info` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `email` VARCHAR(64) NOT NULL COMMENT '用户邮箱',
+  `username` VARCHAR(64) NOT NULL COMMENT '用户名',
+  `password` VARCHAR(255) NOT NULL COMMENT '用户密码哈希',
+  `avatar_asset_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '头像资源ID',
+  `article_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '文章数缓存',
+  `following_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关注数缓存',
+  `follower_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '粉丝数缓存',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间(UTC)',
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_avatar_asset` (`avatar_asset_id`),
+  UNIQUE KEY `uk_user_email` (`email`, `is_deleted`),
+  UNIQUE KEY `uk_user_username` (`username`, `is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户基本信息表';
+
+CREATE TABLE `file_asset` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `owner_user_id` BIGINT UNSIGNED NOT NULL COMMENT '上传者用户ID',
+  `asset_type` VARCHAR(32) NOT NULL COMMENT '资源类型: avatar/article_image/attachment',
+  `provider` VARCHAR(32) NOT NULL DEFAULT 'local' COMMENT '存储提供商',
+  `bucket` VARCHAR(128) DEFAULT NULL COMMENT '存储桶',
+  `storage_key` VARCHAR(512) NOT NULL COMMENT '对象存储Key',
+  `public_url` VARCHAR(1024) NOT NULL COMMENT '公开访问URL',
+  `mime_type` VARCHAR(128) NOT NULL COMMENT 'MIME类型',
+  `size_bytes` BIGINT UNSIGNED NOT NULL COMMENT '文件大小(字节)',
+  `content_hash` CHAR(64) DEFAULT NULL COMMENT '文件SHA-256哈希',
+  `width` INT UNSIGNED DEFAULT NULL COMMENT '图片宽',
+  `height` INT UNSIGNED DEFAULT NULL COMMENT '图片高',
+  `status` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '状态:1有效 0删除',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间(UTC)',
+  PRIMARY KEY (`id`),
+  KEY `idx_asset_owner_type` (`owner_user_id`, `asset_type`, `status`, `created_at`),
+  KEY `idx_asset_hash` (`content_hash`),
+  UNIQUE KEY `uk_provider_bucket_key` (`provider`, `bucket`, `storage_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='文件资源表';
+
+CREATE TABLE `text_body` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `body` LONGTEXT NOT NULL COMMENT '正文内容',
+  `content_hash` CHAR(64) NOT NULL COMMENT '正文内容SHA-256哈希',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  PRIMARY KEY (`id`),
+  KEY `idx_content_hash` (`content_hash`),
+  FULLTEXT KEY `ft_text_body` (`body`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='文本存储表';
+
+CREATE TABLE `user_package` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
+  `pack_name` VARCHAR(64) NOT NULL COMMENT '分类名称',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间(UTC)',
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_package_name` (`user_id`, `pack_name`, `is_deleted`),
+  KEY `idx_package_user` (`user_id`, `is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户分类表';
+
+CREATE TABLE `user_follow` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `following_id` BIGINT UNSIGNED NOT NULL COMMENT '被关注用户ID',
+  `follower_id` BIGINT UNSIGNED NOT NULL COMMENT '关注者用户ID',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间(UTC)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_follow_relation` (`follower_id`, `following_id`),
+  KEY `idx_following` (`following_id`),
+  KEY `idx_follower` (`follower_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户关注关系表';
+
+CREATE TABLE `blog` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID/文章ID',
+  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '作者用户ID',
+  `title` VARCHAR(64) NOT NULL COMMENT '标题',
+  `overview` VARCHAR(255) NOT NULL COMMENT '摘要',
+  `content_text_id` BIGINT UNSIGNED NOT NULL COMMENT '正文text_body.id',
+  `view_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '浏览数',
+  `comment_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '评论数',
+  `package_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '分类ID',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间(UTC)',
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_blog_user_package` (`user_id`, `package_id`, `is_deleted`, `created_at`),
+  KEY `idx_blog_created_at` (`created_at`),
+  KEY `idx_blog_title` (`title`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='文章表';
+
+CREATE TABLE `blog_comment` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID/评论ID',
+  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '评论用户ID',
+  `blog_id` BIGINT UNSIGNED NOT NULL COMMENT '文章ID',
+  `author_id` BIGINT UNSIGNED NOT NULL COMMENT '文章作者用户ID',
+  `is_markdown` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否Markdown',
+  `content_text_id` BIGINT UNSIGNED NOT NULL COMMENT '评论内容text_body.id',
+  `at_user_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '@用户ID',
+  `parent_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '父评论ID',
+  `root_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '根评论ID',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间(UTC)',
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_comment_blog` (`blog_id`, `is_deleted`, `created_at`),
+  KEY `idx_comment_user` (`user_id`, `is_deleted`, `created_at`),
+  KEY `idx_comment_root` (`root_id`, `is_deleted`, `created_at`),
+  KEY `idx_comment_author` (`author_id`, `is_deleted`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='评论表';
+
+CREATE TABLE `blog_tag` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `tag` VARCHAR(30) NOT NULL COMMENT '标签名',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tag_name` (`tag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='标签表';
+
+CREATE TABLE `blog_tag_relation` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `blog_id` BIGINT UNSIGNED NOT NULL COMMENT '文章ID',
+  `tag_id` BIGINT UNSIGNED NOT NULL COMMENT '标签ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_blog_tag_relation` (`blog_id`, `tag_id`),
+  KEY `idx_relation_tag` (`tag_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='文章标签关系表';
+
+CREATE TABLE `email_verification_code` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `email` VARCHAR(64) NOT NULL COMMENT '邮箱',
+  `scene` VARCHAR(32) NOT NULL COMMENT '业务场景: register/reset/update_email',
+  `code_hash` VARCHAR(128) NOT NULL COMMENT '验证码哈希',
+  `expires_at` DATETIME(3) NOT NULL COMMENT '过期时间(UTC)',
+  `used_at` DATETIME(3) NULL DEFAULT NULL COMMENT '使用时间(UTC)',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  PRIMARY KEY (`id`),
+  KEY `idx_email_scene_time` (`email`, `scene`, `created_at`),
+  KEY `idx_expires_at` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='邮箱验证码表';
+
+ALTER TABLE `user_package`
+  ADD CONSTRAINT `fk_package_user`
+  FOREIGN KEY (`user_id`) REFERENCES `user_info` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+ALTER TABLE `user_follow`
+  ADD CONSTRAINT `fk_following_user`
+  FOREIGN KEY (`following_id`) REFERENCES `user_info` (`id`)
+  ON DELETE CASCADE ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_follower_user`
+  FOREIGN KEY (`follower_id`) REFERENCES `user_info` (`id`)
+  ON DELETE CASCADE ON UPDATE RESTRICT;
+
+ALTER TABLE `file_asset`
+  ADD CONSTRAINT `fk_asset_owner_user`
+  FOREIGN KEY (`owner_user_id`) REFERENCES `user_info` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+ALTER TABLE `user_info`
+  ADD CONSTRAINT `fk_user_avatar_asset`
+  FOREIGN KEY (`avatar_asset_id`) REFERENCES `file_asset` (`id`)
+  ON DELETE SET NULL ON UPDATE RESTRICT;
+
+ALTER TABLE `blog`
+  ADD CONSTRAINT `fk_blog_user`
+  FOREIGN KEY (`user_id`) REFERENCES `user_info` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_blog_package`
+  FOREIGN KEY (`package_id`) REFERENCES `user_package` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_blog_text`
+  FOREIGN KEY (`content_text_id`) REFERENCES `text_body` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+ALTER TABLE `blog_comment`
+  ADD CONSTRAINT `fk_comment_user`
+  FOREIGN KEY (`user_id`) REFERENCES `user_info` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_comment_blog`
+  FOREIGN KEY (`blog_id`) REFERENCES `blog` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_comment_author`
+  FOREIGN KEY (`author_id`) REFERENCES `user_info` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_comment_text`
+  FOREIGN KEY (`content_text_id`) REFERENCES `text_body` (`id`)
+  ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_comment_at_user`
+  FOREIGN KEY (`at_user_id`) REFERENCES `user_info` (`id`)
+  ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_comment_parent`
+  FOREIGN KEY (`parent_id`) REFERENCES `blog_comment` (`id`)
+  ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_comment_root`
+  FOREIGN KEY (`root_id`) REFERENCES `blog_comment` (`id`)
+  ON DELETE SET NULL ON UPDATE RESTRICT;
+
+ALTER TABLE `blog_tag_relation`
+  ADD CONSTRAINT `fk_relation_blog`
+  FOREIGN KEY (`blog_id`) REFERENCES `blog` (`id`)
+  ON DELETE CASCADE ON UPDATE RESTRICT,
+  ADD CONSTRAINT `fk_relation_tag`
+  FOREIGN KEY (`tag_id`) REFERENCES `blog_tag` (`id`)
+  ON DELETE CASCADE ON UPDATE RESTRICT;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
