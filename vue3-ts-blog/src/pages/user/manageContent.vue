@@ -78,6 +78,7 @@ import ArticleList from '@/pages/article/components/list.vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import i18n from '@/language/i18n';
 import {useRoute} from 'vue-router';
+import {LOGIN_STATE} from '@/utils/localStoreItem';
 
 const {query} = useRoute();
 
@@ -102,9 +103,7 @@ const packageList = ref([defaultPackage]);
 let selectedPackageId = ref();
 
 const getPackages = () => {
-    proxy.$request.post(Constant.url.getPackages, {
-        [Constant.userId]: userInfo[Constant.userId]
-    }).then((res) => {
+    proxy.$request.get(Constant.url.getPackages(userInfo[Constant.userId])).then((res) => {
         packageList.value = [defaultPackage, ...res.result.list];
     });
 };
@@ -121,8 +120,7 @@ const addPackage = () => {
             ElMessage.error(t('infoMessage.duplicateName'));
             return;
         }
-        proxy.$request.post(Constant.url.addPackage, {
-            [Constant.userId]: userInfo[Constant.userId],
+        proxy.$request.post(Constant.url.addPackage(userInfo[Constant.userId]), {
             [Constant.packageName]: value
         }).then(res => {
             ElMessage({
@@ -142,9 +140,10 @@ const editPackage = (item) => {
         inputPattern: /^\S.{0,63}$/,
         inputErrorMessage: t('inputMessage.invalidInput')
     }).then(({ value }) => {
-        proxy.$request.post(Constant.url.editPackage, {
-            [Constant.userId]: userInfo[Constant.userId],
-            [Constant.packageId]: item[Constant.packageId],
+        proxy.$request.patch(Constant.url.editPackage(
+            userInfo[Constant.userId],
+            item[Constant.packageId]
+        ), {
             [Constant.packageName]: value
         }).then(res => {
             ElMessage({
@@ -161,10 +160,10 @@ const deletePackage = (item) => {
         t('infoMessage.confirmDeletePackage', {name: item[Constant.packageName]}),
         t('label.tip')
     ).then(() => {
-        proxy.$request.post(Constant.url.deletePackage, {
-            [Constant.userId]: userInfo[Constant.userId],
-            [Constant.packageId]: item[Constant.packageId]
-        }).then(() => {
+        proxy.$request.delete(Constant.url.deletePackage(
+            userInfo[Constant.userId],
+            item[Constant.packageId]
+        )).then(() => {
             ElMessage.success(t('infoMessage.deleteSuccess'));
             let index = packageList.value.findIndex(i => i[Constant.packageId] === item[Constant.packageId]);
             packageList.value.splice(index, 1);
@@ -175,16 +174,13 @@ const deletePackage = (item) => {
 const isFollowing = ref(false);
 const isQuerying = ref(false);
 const checkFollow = () => {
-    proxy.$request.post(Constant.url.checkHasFollow, {
-        [Constant.userId]: userInfo[Constant.userId]
-    }).then(res => {
+    proxy.$request.get(Constant.url.checkHasFollow(userInfo[Constant.userId])).then(res => {
         isFollowing.value = res.result.data;
     });
 };
 const switchFollow = () => {
     isQuerying.value = true;
-    proxy.$request.post(Constant.url.switchFollow, {
-        [Constant.userId]: userInfo[Constant.userId],
+    proxy.$request.put(Constant.url.switchFollow(userInfo[Constant.userId]), {
         [Constant.value]: !isFollowing.value
     }).then(res => {
         isFollowing.value = !isFollowing.value;
@@ -195,18 +191,40 @@ const switchFollow = () => {
 };
 
 onMounted(() => {
-    isVisitMode.value = !!query?.[Constant.userId];
-    selectedPackageId.value = 0;
-    if(isVisitMode.value) {
-        userInfo[Constant.userId] = query[Constant.userId];
-        userInfo[Constant.username] = query[Constant.username];
-        if(query[Constant.avatarUrl]) {
-            userInfo[Constant.avatarUrl] = decodeURIComponent(query[Constant.avatarUrl] as string);
+    void (async () => {
+        isVisitMode.value = !!query?.[Constant.userId];
+        selectedPackageId.value = 0;
+
+        if (isVisitMode.value) {
+            const rawPid = query[Constant.packageId] as string | string[] | undefined;
+            const pidStr = Array.isArray(rawPid) ? rawPid[0] : rawPid;
+            if (pidStr != null && pidStr !== '') {
+                const n = parseInt(String(pidStr), 10);
+                if (!Number.isNaN(n) && n > 0) {
+                    selectedPackageId.value = n;
+                }
+            }
+            const raw = query[Constant.userId] as string | string[] | undefined;
+            const idStr = Array.isArray(raw) ? raw[0] : raw;
+            userInfo[Constant.userId] =
+                idStr != null && /^\d+$/.test(String(idStr)) ? Number(idStr) : idStr;
+            try {
+                const res: { result: Record<string, unknown> } = await proxy.$request.get(
+                    Constant.url.getUserInfo(userInfo[Constant.userId])
+                );
+                const r = res.result;
+                userInfo[Constant.username] = r[Constant.username] as string;
+                userInfo[Constant.avatarUrl] = r[Constant.avatarUrl] as string;
+            } catch {
+                userInfo[Constant.username] = '';
+                userInfo[Constant.avatarUrl] = '';
+            }
+            if (localStorage.getItem(LOGIN_STATE)) {
+                checkFollow();
+            }
         }
-        if(query[Constant.packageId]) selectedPackageId.value = parseInt(query[Constant.packageId] as string);
-        checkFollow();
-    }
-    getPackages();
+        getPackages();
+    })();
 });
 </script>
 

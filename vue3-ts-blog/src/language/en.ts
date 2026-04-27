@@ -99,6 +99,7 @@ export default {
         duplicateName: 'duplicate name',
         reLogin: 'Modification successful, please log in again',
         avatarFormat: 'Avatar picture must be JPG/PNG format!',
+        avatarNoFile: 'Please choose an image file first.',
         avatarSize: 'Avatar picture size can not exceed 2MB!',
         confirmUnfollow: 'Unfollow {name}?',
         emailRegistered: 'Email is registered.'
@@ -107,6 +108,7 @@ export default {
         '-10000': 'Network Error',
         '-10001': 'Network Timeout',
         '-10002': 'Server Error',
-        '-10003': 'Login Failed'
+        '-10003': 'Login Failed',
+        '-10004': 'Your session has expired or you are not signed in. Please log in again.'
     }
 };

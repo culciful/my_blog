@@ -9,7 +9,7 @@ import {useUserStore} from '@/stores/user';
 useOnResize();
 const userStore = useUserStore();
 if(localStorage.getItem(LOGIN_STATE)) {
-    proxy.$request.post(Constant.url.getUserInfo).then(res => {
+    proxy.$request.get(Constant.url.getMyProfile).then(res => {
         userStore.setUserData(res.result);
     }).catch(err => {
         localStorage.removeItem(LOGIN_STATE);

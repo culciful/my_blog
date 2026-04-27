@@ -24,7 +24,7 @@
 </template>
 
 <script lang="ts" setup name="AddComment">
-import {getCurrentInstance, ref, watch} from 'vue';1;
+import {getCurrentInstance, ref, watch} from 'vue';
 import {useUserStore} from '@/stores/user';
 import Constant from '@/model/comment/constant';
 import i18n from '@/language/i18n';
@@ -83,10 +83,8 @@ const publish = () => {
         ElMessage.error(t('inputMessage.invalidInput'));
         return;
     }
-    let url = '';
     let params = {};
     if(props.mode === 'add') {
-        url = Constant.url.addComment;
         params = {
             [Constant.userId]: userStore.id,
             [Constant.articleId]: props.articleId,
@@ -105,17 +103,20 @@ const publish = () => {
                 params[Constant.content][Constant.member] = props.parentComment[Constant.member];
             }
         }
-        proxy.$request.post(url, params).then(() => {
+        proxy.$request.post(Constant.url.articleComments(props.articleId), params).then(() => {
             ElMessage.success(t('infoMessage.publishSuccess'));
             emit('finish', params);
         });
     } else {
-        url = Constant.url.editComment;
+        if (!props.editComment) return;
         params = deepCopy(props.editComment);
         params[Constant.createTime] = (new Date().getTime() / 1000).toFixed();
         params[Constant.useMD] = useMD.value;
         params[Constant.content][Constant.msg] = newComment.value;
-        proxy.$request.post(url, params).then(() => {
+        proxy.$request.patch(
+            Constant.url.articleComment(props.articleId, props.editComment[Constant.commentId]),
+            params
+        ).then(() => {
             ElMessage.success(t('infoMessage.editSuccess'));
             emit('finish', params);
         });

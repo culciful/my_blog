@@ -1,5 +1,5 @@
 import request from '@/utils/request';
-import Constant from '@/model/api/constant.ts';
+import Constant from '@/model/api/constant';
 import JSEncrypt from 'jsencrypt';
 
 const templateKey = '-----BEGIN PUBLIC KEY-----{key}-----END PUBLIC KEY-----';

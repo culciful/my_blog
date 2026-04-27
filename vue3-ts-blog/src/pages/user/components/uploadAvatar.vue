@@ -102,14 +102,19 @@ const cropperOption = reactive({
 
 const acceptType = 'image/png,image/jpg,image/jpeg';
 const handleChange: UploadProps['onChange'] = (uploadFile) => {
-    const rawFile = uploadFile.raw;
-    if (!acceptType.search(rawFile.type)) {
+    const file = uploadFile.raw;
+    if (!file) {
+        ElMessage.error(t('infoMessage.avatarNoFile'));
+        return;
+    }
+    const allowTypes = acceptType.split(',');
+    if (!allowTypes.includes(file.type)) {
         ElMessage.error(t('infoMessage.avatarFormat'));
-    } else if (rawFile.size / 1024 / 1024 > 2) {
+    } else if (file.size / 1024 / 1024 > 2) {
         ElMessage.error(t('infoMessage.avatarSize'));
     } else {
         const reader = new FileReader();
-        reader.readAsDataURL(rawFile);
+        reader.readAsDataURL(file);
         reader.onload = () => {
             cropperOption.img = reader.result as any;
             active.value++;

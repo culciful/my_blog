@@ -55,6 +55,7 @@ import type { FormInstance, FormRules } from 'element-plus';
 import {globalRules} from '@/utils/validate';
 import { useRouter } from 'vue-router';
 import LoginConstant from '@/model/user/constant';
+import ApiConstant from '@/model/api/constant';
 import {useUserStore} from '@/stores/user';
 import {LOGIN_STATE} from '@/utils/localStoreItem';
 
@@ -83,7 +84,7 @@ const onSubmit =  (formEl: FormInstance | undefined) => {
     formEl.validate((valid) => {
         if (valid) {
             isQuerying.value = true;
-            proxy.$request.post(LoginConstant.url.login, {
+            proxy.$request.post(ApiConstant.url.authLogin, {
                 [LoginConstant.username]: loginForm.username,
                 [LoginConstant.password]: loginForm.password
             }).then(res => {

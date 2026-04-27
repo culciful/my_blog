@@ -123,7 +123,7 @@
     </div>
 </div>
 <check-pwd-dialog v-model="showCheckPwdDialog" @success="send"></check-pwd-dialog>
-<upload-avatar v-model="showUploadAvatar" @success="getUserInfo"></upload-avatar>
+<upload-avatar v-model="showUploadAvatar" @success="loadMyProfile"></upload-avatar>
 </template>
 
 <script lang="ts" setup name="ManageContent">
@@ -230,11 +230,11 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
         await formEl.validateField('username', (valid) => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.post(Constant.url.updateUserInfo, {
+                proxy.$request.patch(Constant.url.updateUserInfo, {
                     [Constant.username]: userForm.username
                 }).then(res => {
                     isQuerying.value = false;
-                    getUserInfo();
+                    loadMyProfile();
                 }).catch(err => {
                     isQuerying.value = false;
                 });
@@ -245,7 +245,7 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
         await formEl.validateField(['email', 'verificationCode'], (valid) => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.post(Constant.url.updateUserInfo, {
+                proxy.$request.patch(Constant.url.updateUserInfo, {
                     [Constant.email]: userForm.email,
                     [Constant.verificationCode]: userForm.verificationCode
                 }).then(res => {
@@ -264,7 +264,7 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
                 proxy.$request.post(Constant.url.checkPassword, {
                     [Constant.password]: userForm.password
                 }).then(() => {
-                    proxy.$request.post(Constant.url.updateUserInfo, {
+                    proxy.$request.patch(Constant.url.updateUserInfo, {
                         [Constant.password]: userForm.newPassword
                     }).then(() => {
                         isQuerying.value = false;
@@ -297,12 +297,12 @@ const state = reactive({
     [Constant.articleCount]: 0
 });
 const getStat = () => {
-    proxy.$request.post(Constant.url.stat).then(({result}) => {
+    proxy.$request.get(Constant.url.stat).then(({result}) => {
         setReactiveData(state, result);
     });
 };
-const getUserInfo = () => {
-    proxy.$request.post(Constant.url.getUserInfo).then(({result}) => {
+const loadMyProfile = () => {
+    proxy.$request.get(Constant.url.getMyProfile).then(({result}) => {
         originUser.value = result;
         userStore.setUserData(result);
         userForm.username = result[Constant.username];
@@ -311,7 +311,7 @@ const getUserInfo = () => {
 };
 
 onMounted(() => {
-    getUserInfo();
+    loadMyProfile();
     getStat();
 });
 </script>

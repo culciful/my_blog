@@ -78,8 +78,7 @@ const switchFollow = (item) => {
             t('label.tip')
         ).then(() => {
             isQuerying.value = true;
-            proxy.$request.post(Constant.url.switchFollow, {
-                [Constant.userId]: item[Constant.userId],
+            proxy.$request.put(Constant.url.switchFollow(item[Constant.userId]), {
                 [Constant.value]: false
             }).then(() => {
                 isQuerying.value = false;
@@ -87,8 +86,7 @@ const switchFollow = (item) => {
             }).catch(err => isQuerying.value = false);
         }).catch(() => {});
     } else {
-        proxy.$request.post(Constant.url.switchFollow, {
-            [Constant.userId]: item[Constant.userId],
+        proxy.$request.put(Constant.url.switchFollow(item[Constant.userId]), {
             [Constant.value]: true
         }).then(() => {
             isQuerying.value = false;

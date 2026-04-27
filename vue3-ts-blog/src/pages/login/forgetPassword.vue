@@ -163,7 +163,7 @@ const clickBtn = () => {
         forgetPwdRef.value.validateField(['newPassword', 'confirmNewPwd'], valid => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.post(Constant.url.updateUserInfo, {
+                proxy.$request.patch(Constant.url.updateUserInfo, {
                     [Constant.password]: forgetPwdForm.newPassword
                 }).then(res => {
                     isQuerying.value = false;

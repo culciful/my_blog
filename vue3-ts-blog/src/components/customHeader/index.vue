@@ -92,7 +92,9 @@ import {storeToRefs} from 'pinia';
 import {useRoute} from 'vue-router';
 import {needLoginPathReg} from '@/router/index.ts';
 import {getCurrentInstance} from 'vue';
-import Constant, {handleAvatar}  from '@/model/user/constant';
+import {handleAvatar} from '@/model/user/constant';
+import ApiConstant from '@/model/api/constant';
+import {LOGIN_STATE} from '@/utils/localStoreItem';
 
 const props = defineProps({
     needHandleSearch: {
@@ -155,11 +157,15 @@ const manageContentHandler = () => {
 };
 
 const route = useRoute();
-const logoutHandler = () => {
-    proxy.$request.post(Constant.url.logout);
-    userStore.clear();
-    if(needLoginPathReg.test(route.path)) {
-        router.push({name: 'home'});
+const logoutHandler = async () => {
+    try {
+        await proxy.$request.post(ApiConstant.url.authLogout);
+    } finally {
+        userStore.clear();
+        localStorage.removeItem(LOGIN_STATE);
+        if (needLoginPathReg.test(route.path)) {
+            router.push({ name: 'home' });
+        }
     }
 };
 const userOptions = {

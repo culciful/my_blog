@@ -1,0 +1,10 @@
+{
+  "errorCode": 0,
+  "result": {
+    "id": 1,
+    "username": "mock",
+    "avatarUrl": "/static/img/favicon.ico",
+    "createTime": 1704034129,
+    "email": "mock@example.com"
+  }
+}

@@ -66,7 +66,7 @@
 import {getCurrentInstance, onMounted, ref} from 'vue';
 import CustomHeader from '@/components/customHeader/index.vue';
 import {useUserStore} from '@/stores/user';
-import Constant from '@/model/comment/constant.ts';
+import Constant from '@/model/comment/constant';
 import {viewUser, handleAvatar} from '@/model/user/constant';
 import {useRouter} from 'vue-router';
 import {transferTimestamp} from '@/utils/utils';
@@ -91,7 +91,7 @@ const handleCurrentChange = (val: number) => {
 };
 
 const getByUserId = () => {
-    proxy.$request.post(Constant.url.getComments, {
+    proxy.$request.post(Constant.url.commentsInboxSearch, {
         [Constant.userId]: userStore.id,
         pageSize: pageSize.value,
         currentPage: currentPage.value,

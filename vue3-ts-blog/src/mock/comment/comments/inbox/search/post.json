@@ -1,0 +1,117 @@
+{
+  "errorCode": 0,
+  "result": {
+    "list": [
+      {
+        "cid": 123253453,
+        "aid": 123,
+        "authorId": 432,
+        "title": "水平布局",
+        "createTime": 1704034129,
+        "useMD": true,
+        "content": {
+          "msg": "写的真好！"
+        },
+        "member": {
+          "id": 1231332,
+          "username": "李四",
+          "avatarUrl": "/static/img/favicon.ico"
+        },
+        "comments": {
+          "list": [
+            {
+              "parent": 123253453,
+              "parentContent": {
+                "msg": "写的真好！"
+              },
+              "root": 123253453,
+              "cid": 424234,
+              "aid": 123,
+              "authorId": 432,
+              "title": "水平布局",
+              "createTime": 1704034129,
+              "useMD": true,
+              "content": {
+                "msg": "`const user = 1;`这样才对"
+              },
+              "member": {
+                "id": 1234124,
+                "username": "张三",
+                "avatarUrl": "/static/img/favicon.ico"
+              }
+            },
+            {
+              "parent": 424234,
+              "parentContent": {
+                "msg": "`const user = 1;`这样才对"
+              },
+              "root": 123253453,
+              "cid": 53543543,
+              "aid": 123,
+              "authorId": 432,
+              "title": "水平布局",
+              "createTime": 1704034129,
+              "content": {
+                "msg": "一般般",
+                "at_name_to_id": {"张三":  1234124},
+                "member": {
+                  "id": 1234124,
+                  "username": "张三",
+                  "avatarUrl": "/static/img/favicon.ico"
+                }
+              },
+              "member": {
+                "id": 1231332,
+                "username": "李四",
+                "avatarUrl": "/static/img/favicon.ico"
+              }
+            }
+          ],
+          "total": 2
+        }
+      },
+      {
+        "cid": 1232534533,
+        "aid": 123,
+        "authorId": 432,
+        "title": "水平布局",
+        "createTime": 1704034129,
+        "useMD": true,
+        "content": {
+          "msg": "看好你！"
+        },
+        "member": {
+          "id": 1231332,
+          "username": "李四",
+          "avatarUrl": "/static/img/favicon.ico"
+        },
+        "comments": {
+          "list": [],
+          "total": 0
+        }
+      },
+      {
+        "parent": 123253453,
+        "parentContent": {
+          "msg": "写的真好！"
+        },
+        "root": 123253453,
+        "cid": 445778,
+        "aid": 123,
+        "authorId": 432,
+        "title": "水平布局",
+        "createTime": 1704034129,
+        "useMD": true,
+        "content": {
+          "msg": "`const user = 1;`这样才对"
+        },
+        "member": {
+          "id": 1234124,
+          "username": "张三",
+          "avatarUrl": "/static/img/favicon.ico"
+        }
+      }
+    ],
+    "total": 100
+  }
+}
