@@ -126,7 +126,7 @@
 <upload-avatar v-model="showUploadAvatar" @success="loadMyProfile"></upload-avatar>
 </template>
 
-<script lang="ts" setup name="ManageContent">
+<script lang="ts" setup name="UserCenter">
 import CheckPwdDialog from './components/checkPwdDialog.vue';
 import UploadAvatar from './components/uploadAvatar.vue';
 import {getCurrentInstance, ref, reactive, onMounted} from 'vue';
@@ -140,7 +140,18 @@ import Constant, {handleAvatar} from '@/model/user/constant';
 const {proxy} = getCurrentInstance();
 const { t } = i18n.global as any;
 const userStore = useUserStore();
-const originUser = ref({});
+interface OriginUser {
+    email: string;
+    username: string;
+    avatarUrl: string;
+    createTime: number;
+}
+const originUser = ref<OriginUser>({
+    email: '',
+    username: '',
+    avatarUrl: '',
+    createTime: 0
+});
 const editContent = ref('');
 const showUploadAvatar = ref(false);
 
