@@ -13,7 +13,7 @@ import lombok.Data;
 @TableName(value ="text_body")
 @Data
 public class TextBody implements Serializable {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Integer id;
 
     private Integer textId;

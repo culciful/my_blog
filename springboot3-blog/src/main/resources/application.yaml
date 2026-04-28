@@ -1,31 +1,47 @@
-# server配置
+# =========================
+# Local runnable + secure defaults
+# Use env vars in production to avoid secret leakage.
+# Profiles: dev (Vite cross-port + CORS), prod (HTTPS cookie, tighten CORS).
+# =========================
+
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /
 
-# 连接池配置
 spring:
+  profiles:
+    default: dev
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
-      url: jdbc:mysql:///culciful_blog
-      username: root
-      password: 123456
+      url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/culciful_blog}
+      username: ${DB_USERNAME:root}
+      password: ${DB_PASSWORD:root}
       driver-class-name: com.mysql.cj.jdbc.Driver
 
-# mybatis-plus的配置
 mybatis-plus:
   type-aliases-package: com.culciful.pojo
   global-config:
     db-config:
-      logic-delete-field: isDeleted  #全局逻辑删除
-      id-type: auto #主键策略自增长
+      logic-delete-field: isDeleted
+      id-type: input
   configuration:
+    # local debugging can keep SQL logs; override in prod if needed
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
-#jwt配置
 jwt:
   token:
-    tokenExpiration: 216000 #有效时间,单位分钟
-    tokenSignKey: culciful_blog  #当前程序签名秘钥 自定义
+    # unit: minutes
+    tokenExpiration: ${JWT_TOKEN_EXPIRATION:10080}
+    # HS512: use a long random secret in production (e.g. openssl rand -hex 64)
+    tokenSignKey: ${JWT_TOKEN_SIGN_KEY:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+  cookie:
+    name: ${JWT_COOKIE_NAME:BLOG_TOKEN}
+    path: /
+    same-site: Lax
+
+# Cross-origin allowlist (dev). Prod same-site: keep empty — see application-prod.yaml.
+blog:
+  cors:
+    allowed-origins: []

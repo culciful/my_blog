@@ -1,0 +1,75 @@
+package com.culciful.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.culciful.dto.LoginRequest;
+import com.culciful.mapper.UserInfoMapper;
+import com.culciful.pojo.UserInfo;
+import com.culciful.security.JwtCookieService;
+import com.culciful.service.UserAuthService;
+import com.culciful.security.token.JwtHelper;
+import com.culciful.utils.MD5Util;
+import com.culciful.common.api.R;
+import com.culciful.common.enums.ResultCodeEnum;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+public class UserAuthServiceImpl implements UserAuthService {
+
+    private final UserInfoMapper userInfoMapper;
+    private final JwtHelper jwtHelper;
+    private final JwtCookieService jwtCookieService;
+
+    @Override
+    public R<Map<String, Object>> login(LoginRequest request, HttpServletResponse response) {
+        UserInfo user = authenticate(request.username(), request.password());
+        if (user == null) {
+            return R.fail(ResultCodeEnum.PASSWORD_ERROR);
+        }
+        String jwt = jwtHelper.createToken(user.getId().longValue());
+        jwtCookieService.addTokenCookie(response, jwt, jwtHelper.cookieMaxAgeSeconds());
+        return R.ok(toProfileMap(user, true));
+    }
+
+    @Override
+    public UserInfo authenticate(String usernameOrEmail, String rawPassword) {
+        if (usernameOrEmail == null || usernameOrEmail.isBlank() || rawPassword == null) {
+            return null;
+        }
+        UserInfo user = userInfoMapper.selectOne(new LambdaQueryWrapper<UserInfo>()
+                .eq(UserInfo::getIsDeleted, 0)
+                .and(w -> w.eq(UserInfo::getUsername, usernameOrEmail)
+                        .or()
+                        .eq(UserInfo::getEmail, usernameOrEmail))
+                .last("LIMIT 1"));
+        if (user == null) {
+            return null;
+        }
+        String hashed = MD5Util.encrypt(rawPassword);
+        if (user.getPassword() == null || !user.getPassword().equalsIgnoreCase(hashed)) {
+            return null;
+        }
+        return user;
+    }
+
+    private static Map<String, Object> toProfileMap(UserInfo user, boolean includeEmail) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", user.getId());
+        m.put("username", user.getUsername());
+        m.put("avatarUrl", user.getAvatarUrl());
+        if (user.getCreateTime() != null) {
+            m.put("createTime", user.getCreateTime().getTime() / 1000L);
+        } else {
+            m.put("createTime", 0L);
+        }
+        if (includeEmail) {
+            m.put("email", user.getEmail());
+        }
+        return m;
+    }
+}

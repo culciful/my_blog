@@ -15,7 +15,7 @@ import lombok.Data;
 @Data
 public class Blog implements Serializable {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Integer id;
 
     private Integer blogId;

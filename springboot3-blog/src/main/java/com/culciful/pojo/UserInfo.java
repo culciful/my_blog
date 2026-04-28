@@ -14,7 +14,7 @@ import lombok.Data;
 @TableName(value ="user_info")
 @Data
 public class UserInfo implements Serializable {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Integer id;
 
     private Integer userId;

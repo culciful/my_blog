@@ -6,7 +6,8 @@ import com.culciful.param.EmailExistParam;
 import com.culciful.pojo.UserInfo;
 import com.culciful.service.UserInfoService;
 import com.culciful.mapper.UserInfoMapper;
-import com.culciful.utils.R;
+import com.culciful.common.api.R;
+import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.annotation.Resource;
 // import org.springframework.security.core.userdetails.User;
 // import org.springframework.security.core.userdetails.UserDetails;
@@ -19,7 +20,7 @@ import java.util.Map;
 
 /**
 * @author culciful_zy
-* @description 针对表【user_info(用户基本信息表)】的数据库操作Service实现
+* @description Service implementation for user_info table operations.
 * @createDate 2024-01-31 21:38:07
 */
 @Service
@@ -29,23 +30,26 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo>
     implements UserInfoService{
     @Resource
     private UserInfoMapper userInfoMapper;
+    @Resource
+    private SnowflakeIdGenerator snowflakeIdGenerator;
     // @Resource
     // private DBUserDetailsManager dbUserDetailsManager;
     // @Override
     // public void saveUserDetails(UserInfo userInfo) {
     //     UserDetails userDetails = User.withDefaultPasswordEncoder()
-    //             .username(userInfo.getUsername()) //自定义用户名
-    //             .password(userInfo.getPassword()) //自定义密码
+    //             .username(userInfo.getUsername()) // custom username
+    //             .password(userInfo.getPassword()) // custom password
     //             .build();
     //     dbUserDetailsManager.createUser(userInfo);
     // }
 
     @Override
     public R checkEmailExist(EmailExistParam emailExistParam) {
+        long requestTraceId = snowflakeIdGenerator.nextId();
         LambdaQueryWrapper<UserInfo> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserInfo::getEmail, emailExistParam.getEmail());
         Long count = userInfoMapper.selectCount(queryWrapper);
-        log.info("UserInfoServiceImpl.checkEmailExist is over, result: {}", count);
+        log.info("UserInfoServiceImpl.checkEmailExist is over, traceId: {}, result: {}", requestTraceId, count);
         Map<String, Integer> data = new HashMap<>();
         data.put("isExisted", count > 0 ? 1 : 0);
         return R.ok(data);

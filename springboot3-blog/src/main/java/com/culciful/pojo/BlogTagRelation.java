@@ -13,7 +13,7 @@ import lombok.Data;
 @TableName(value ="blog_tag_relation")
 @Data
 public class BlogTagRelation implements Serializable {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Integer id;
 
     private Integer blogId;

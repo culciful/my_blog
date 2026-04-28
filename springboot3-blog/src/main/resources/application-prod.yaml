@@ -1,0 +1,10 @@
+# Same-site deployment: browser and API share one origin; CORS list can be a single public URL
+# or left empty if you terminate TLS at the same host the SPA is served from.
+jwt:
+  cookie:
+    secure: true
+
+blog:
+  cors:
+    allowed-origins:
+      - ${BLOG_PUBLIC_ORIGIN:https://blog.example.com}

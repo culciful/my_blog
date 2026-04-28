@@ -1,0 +1,10 @@
+# Local + Vite (5173): credentialed requests from browser need explicit CORS.
+jwt:
+  cookie:
+    secure: false
+
+blog:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+      - http://127.0.0.1:5173
