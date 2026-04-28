@@ -1,68 +1,95 @@
-# vue3-blog
+# vue3-ts-blog
 
-This template should help get you started developing with Vue 3 in Vite.
+A frontend-only blog web application built with Vue 3, TypeScript, and Vite.
 
-## Recommended IDE Setup
+## Tech Stack
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+- Vue 3
+- TypeScript
+- Vite
+- Vue Router
+- Pinia
+- Element Plus
+- Axios
+- Cypress
 
-## Type Support for `.vue` Imports in TS
+## Requirements
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+- Node.js 18+
+- npm 9+
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+## Quick Start
 
-1. Disable the built-in TypeScript Extension
-    1) Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-    2) Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
+# install dependencies
 npm install
-```
 
-### Compile and Hot-Reload for Development
-
-```sh
+# start development server
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+The app runs on the default Vite port shown in your terminal after startup.
 
-```sh
+## Available Scripts
+
+```bash
+# development
+npm run dev
+
+# type-check + production build
 npm run build
-```
 
-### Run Headed Component Tests with [Cypress Component Testing](https://on.cypress.io/component)
+# preview production build
+npm run preview
 
-```sh
-npm run test:unit:dev # or `npm run test:unit` for headless testing
-```
+# lint and auto-fix
+npm run lint
 
-### Run End-to-End Tests with [Cypress](https://www.cypress.io/)
+# component tests (Cypress)
+npm run test:unit
+npm run test:unit:dev
 
-```sh
+# e2e tests (Cypress)
+npm run test:e2e
 npm run test:e2e:dev
 ```
 
-This runs the end-to-end tests against the Vite development server.
-It is much faster than the production build.
+## Project Architecture
 
-But it's still recommended to test the production build with `test:e2e` before deploying (e.g. in CI environments):
-
-```sh
-npm run build
-npm run test:e2e
+```text
+src/
+├─ assets/       # Static assets (images, icons, fonts)
+├─ components/   # Reusable UI components
+├─ language/     # i18n resources and language setup
+├─ mixins/       # Shared component logic
+├─ mock/         # Mock data and mock handlers
+├─ model/        # Frontend data models / typings
+├─ pages/        # Page-level views
+├─ router/       # Route definitions and navigation guards
+├─ stores/       # Pinia stores
+├─ style/        # Global styles and theme files
+├─ utils/        # General utility functions
+├─ App.vue       # Root component
+└─ main.ts       # App bootstrap entry
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+## Environment Variables
 
-```sh
-npm run lint
-```
+Use environment files to manage runtime configuration:
+
+- `.env.development`
+- `.env.production`
+- `.env.example`
+
+Copy `.env.example` and adjust values based on your local environment.
+
+## Recommended IDE Setup
+
+- [VS Code](https://code.visualstudio.com/)
+- [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+- Disable Vetur if installed
+
+## Notes
+
+- Keep business logic in `stores/` and `utils/`, not in page templates.
+- Keep shared UI in `components/` to avoid duplication.
