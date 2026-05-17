@@ -16,7 +16,14 @@ const Error_Code = {
     networkError: -10000,
     timeoutError: -10001,
     serverError: -10002,
+    loginFailed: -10003,
     loginValidError: -10004
+};
+
+const showErrorMessage = (errorCode: number, fallbackMessage?: string) => {
+    const key = 'errorCode.' + errorCode;
+    const message = t(key);
+    ElMessage.error(message === key ? fallbackMessage || message : message);
 };
 
 /** 代理目标见 vite.config 中 loadEnv 的 VITE_PROXY_TARGET；API 根见 VITE_API_BASE */
@@ -60,20 +67,26 @@ axiosInstance.interceptors.response.use(
         return response;
     },
     error => {
+        const responseData = error?.response?.data || {};
+        const backendErrorCode = Number(responseData.errorCode);
         if (error && error.response) {
-            // 1.公共错误处理
-            // 2.根据响应码具体处理
-            switch (error.response.status) {
-            case 401:
-                error.errorCode = Error_Code.loginValidError;
+            if (Number.isFinite(backendErrorCode)) {
+                error.errorCode = backendErrorCode;
+            } else {
+                switch (error.response.status) {
+                case 401:
+                    error.errorCode = Error_Code.loginValidError;
+                    break;
+                case 500:
+                    error.errorCode = Error_Code.serverError;
+                    break;
+                default:
+                    error.errorCode = Error_Code.networkError;
+                }
+            }
+            if (error.response.status === 401) {
                 localStorage.removeItem(LOGIN_STATE);
                 window.location.href = '/login';
-                break;
-            case 500:
-                error.errorCode = Error_Code.serverError; // 服务器端出错
-                break;
-            default:
-                error.errorCode = Error_Code.networkError;
             }
         } else {
             // 超时处理
@@ -83,7 +96,7 @@ axiosInstance.interceptors.response.use(
                 error.errorCode = Error_Code.networkError;
             }
         }
-        ElMessage.error(t('errorCode.' + error.errorCode));
+        showErrorMessage(error.errorCode, responseData.message || error.message);
         return Promise.reject(error);
     }
 );
@@ -101,7 +114,7 @@ function get(
         const errorCode = (res.data || {}).errorCode;
         if (errorCode === 0) resolve(res.data);
         else {
-          ElMessage.error(t('errorCode.' + errorCode));
+          showErrorMessage(errorCode, res.data?.message);
           reject(res.data);
         }
       }).catch(error => reject(error));
@@ -118,7 +131,7 @@ function post(
             const errorCode = (res.data || {}).errorCode;
             if(errorCode === 0) resolve(res.data);
             else {
-                ElMessage.error(t('errorCode.' + errorCode));
+                showErrorMessage(errorCode, res.data?.message);
                 reject(res.data);
             }
         }).catch( error => {
@@ -137,7 +150,7 @@ function put(
             const errorCode = (res.data || {}).errorCode;
             if (errorCode === 0) resolve(res.data);
             else {
-                ElMessage.error(t('errorCode.' + errorCode));
+                showErrorMessage(errorCode, res.data?.message);
                 reject(res.data);
             }
         }).catch(error => {
@@ -156,7 +169,7 @@ function patch(
             const errorCode = (res.data || {}).errorCode;
             if (errorCode === 0) resolve(res.data);
             else {
-                ElMessage.error(t('errorCode.' + errorCode));
+                showErrorMessage(errorCode, res.data?.message);
                 reject(res.data);
             }
         }).catch(error => {
@@ -174,7 +187,7 @@ function del(
             const errorCode = (res.data || {}).errorCode;
             if (errorCode === 0) resolve(res.data);
             else {
-                ElMessage.error(t('errorCode.' + errorCode));
+                showErrorMessage(errorCode, res.data?.message);
                 reject(res.data);
             }
         }).catch(error => {

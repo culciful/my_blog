@@ -109,6 +109,15 @@ export default {
         '-10001': 'Network Timeout',
         '-10002': 'Server Error',
         '-10003': 'Login Failed',
-        '-10004': 'Your session has expired or you are not signed in. Please log in again.'
+        '-10004': 'Your session has expired or you are not signed in. Please log in again.',
+        '-10005': 'Username does not exist or user status is invalid',
+        '-10006': 'Incorrect password',
+        '-10007': 'Username is already used',
+        '-10008': 'Email is already registered',
+        '-10009': 'You do not have permission to perform this operation',
+        '-10010': 'Resource not found',
+        '-10011': 'Business operation failed',
+        '-10012': 'Parameter validation failed',
+        '-10013': 'Unknown system error'
     }
 };
