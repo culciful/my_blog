@@ -4,42 +4,92 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import lombok.Data;
+import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
- * @TableName blog_comment
+ * <p>
+ * Comment table
+ * </p>
+ *
+ * @author culciful
+ * @since 2026-04-28
  */
-@TableName(value ="blog_comment")
-@Data
-public class BlogComment implements Serializable {
-    @TableId(type = IdType.INPUT)
-    private Integer id;
+@Getter
+@Setter
+@TableName("blog_comment")
+public class BlogComment {
 
-    private Integer commentId;
+    /**
+     * Snowflake ID / comment ID
+     */
+    @TableId(value = "id", type = IdType.INPUT)
+    private Long id;
 
-    private Integer userId;
+    /**
+     * Comment user ID
+     */
+    @TableField("user_id")
+    private Long userId;
 
-    private Integer blogId;
+    /**
+     * Article ID
+     */
+    @TableField("blog_id")
+    private Long blogId;
 
-    private Integer authorId;
+    /**
+     * Article author user ID
+     */
+    @TableField("author_id")
+    private Long authorId;
 
-    private Integer isMarkdown;
+    /**
+     * Markdown flag
+     */
+    @TableField("is_markdown")
+    private Boolean isMarkdown;
 
-    private Integer textId;
+    /**
+     * Comment content text_body.id
+     */
+    @TableField("content_text_id")
+    private Long contentTextId;
 
-    private Integer atUserId;
+    /**
+     * Mentioned user ID
+     */
+    @TableField("at_user_id")
+    private Long atUserId;
 
-    private Integer parent;
+    /**
+     * Parent comment ID
+     */
+    @TableField("parent_id")
+    private Long parentId;
 
-    private Integer root;
+    /**
+     * Root comment ID
+     */
+    @TableField("root_id")
+    private Long rootId;
 
-    private Date createTime;
+    /**
+     * Created time (UTC)
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 
-    private Date updateTime;
+    /**
+     * Updated time (UTC)
+     */
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 
-    private Integer isDeleted;
-
-    private static final long serialVersionUID = 1L;
+    /**
+     * Deleted flag
+     */
+    @TableField("is_deleted")
+    private Boolean isDeleted;
 }

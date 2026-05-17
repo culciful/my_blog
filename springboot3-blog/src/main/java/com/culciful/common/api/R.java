@@ -4,7 +4,7 @@ import com.culciful.common.enums.ResultCodeEnum;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * 全局统一返回结果类
+ * Global unified API response wrapper.
  */
 public class R<T> {
     private Integer errorCode;

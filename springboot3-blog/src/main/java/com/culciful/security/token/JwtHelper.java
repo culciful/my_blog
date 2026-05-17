@@ -17,7 +17,7 @@ import java.util.Date;
 @ConfigurationProperties(prefix = "jwt.token")
 public class JwtHelper {
 
-    /** 有效时间，单位：分钟（与既有配置一致） */
+    /** Token lifetime in minutes, consistent with the existing configuration. */
     private long tokenExpiration;
     private String tokenSignKey;
 

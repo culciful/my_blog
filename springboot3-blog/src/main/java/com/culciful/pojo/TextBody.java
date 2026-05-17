@@ -4,23 +4,44 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import lombok.Data;
+import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
- * @TableName text_body
+ * <p>
+ * Text body storage table
+ * </p>
+ *
+ * @author culciful
+ * @since 2026-04-28
  */
-@TableName(value ="text_body")
-@Data
-public class TextBody implements Serializable {
-    @TableId(type = IdType.INPUT)
-    private Integer id;
+@Getter
+@Setter
+@TableName("text_body")
+public class TextBody {
 
-    private Integer textId;
+    /**
+     * Snowflake ID
+     */
+    @TableId(value = "id", type = IdType.INPUT)
+    private Long id;
 
+    /**
+     * Body content
+     */
+    @TableField("body")
     private String body;
 
-    private Integer isDeleted;
+    /**
+     * SHA-256 hash of body content
+     */
+    @TableField("content_hash")
+    private String contentHash;
 
-    private static final long serialVersionUID = 1L;
+    /**
+     * Created time (UTC)
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 }

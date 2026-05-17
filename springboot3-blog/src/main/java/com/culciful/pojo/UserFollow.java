@@ -4,26 +4,49 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import lombok.Data;
+import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
- * @TableName user_follow
+ * <p>
+ * User follow relation table
+ * </p>
+ *
+ * @author culciful
+ * @since 2026-04-28
  */
-@TableName(value ="user_follow")
-@Data
-public class UserFollow implements Serializable {
-    @TableId(type = IdType.INPUT)
-    private Integer id;
+@Getter
+@Setter
+@TableName("user_follow")
+public class UserFollow {
+    /**
+     * Snowflake ID
+     */
+    @TableId(value = "id", type = IdType.INPUT)
+    private Long id;
 
-    private Integer following;
+    /**
+     * Followed user ID
+     */
+    @TableField("following_id")
+    private Long followingId;
 
-    private Integer follower;
+    /**
+     * Follower user ID
+     */
+    @TableField("follower_id")
+    private Long followerId;
 
-    private Integer isDeleted;
+    /**
+     * Created time (UTC)
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 
-    private Date updateTime;
-
-    private static final long serialVersionUID = 1L;
+    /**
+     * Updated time (UTC)
+     */
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 }

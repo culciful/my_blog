@@ -4,19 +4,30 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
- * @TableName blog_tag
+ * <p>
+ * Tag table
+ * </p>
+ *
+ * @author culciful
+ * @since 2026-04-28
  */
-@TableName(value ="blog_tag")
-@Data
-public class BlogTag implements Serializable {
-    @TableId(type = IdType.INPUT)
-    private Integer id;
+@Getter
+@Setter
+@TableName("blog_tag")
+public class BlogTag {
+    /**
+     * Snowflake ID
+     */
+    @TableId(value = "id", type = IdType.INPUT)
+    private Long id;
 
+    /**
+     * Tag name
+     */
+    @TableField("tag")
     private String tag;
-
-    private static final long serialVersionUID = 1L;
 }

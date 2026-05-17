@@ -4,41 +4,86 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import lombok.Data;
+import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
- * @TableName blog
+ * <p>
+ * Article table
+ * </p>
+ *
+ * @author culciful
+ * @since 2026-04-28
  */
-@TableName(value ="blog")
-@Data
-public class Blog implements Serializable {
+@Getter
+@Setter
+@TableName("blog")
+public class Blog {
 
-    @TableId(type = IdType.INPUT)
-    private Integer id;
+    /**
+     * Snowflake ID / article ID
+     */
+    @TableId(value = "id", type = IdType.INPUT)
+    private Long id;
 
-    private Integer blogId;
+    /**
+     * Author user ID
+     */
+    @TableField("user_id")
+    private Long userId;
 
-    private Integer userId;
-
+    /**
+     * Title
+     */
+    @TableField("title")
     private String title;
 
+    /**
+     * Summary
+     */
+    @TableField("overview")
     private String overview;
 
-    private Integer textId;
+    /**
+     * Content text_body.id
+     */
+    @TableField("content_text_id")
+    private Long contentTextId;
 
+    /**
+     * View count
+     */
+    @TableField("view_count")
     private Integer viewCount;
 
+    /**
+     * Comment count
+     */
+    @TableField("comment_count")
     private Integer commentCount;
 
-    private Integer packId;
+    /**
+     * Package ID
+     */
+    @TableField("package_id")
+    private Long packageId;
 
-    private Date createTime;
+    /**
+     * Created time (UTC)
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 
-    private Date updateTime;
+    /**
+     * Updated time (UTC)
+     */
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 
-    private Integer isDeleted;
-
-    private static final long serialVersionUID = 1L;
+    /**
+     * Deleted flag
+     */
+    @TableField("is_deleted")
+    private Boolean isDeleted;
 }

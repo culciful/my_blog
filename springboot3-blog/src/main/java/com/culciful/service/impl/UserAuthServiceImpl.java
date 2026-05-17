@@ -7,15 +7,16 @@ import com.culciful.pojo.UserInfo;
 import com.culciful.security.JwtCookieService;
 import com.culciful.service.UserAuthService;
 import com.culciful.security.token.JwtHelper;
-import com.culciful.utils.MD5Util;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.time.ZoneOffset;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class UserAuthServiceImpl implements UserAuthService {
     private final UserInfoMapper userInfoMapper;
     private final JwtHelper jwtHelper;
     private final JwtCookieService jwtCookieService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public R<Map<String, Object>> login(LoginRequest request, HttpServletResponse response) {
@@ -42,7 +44,7 @@ public class UserAuthServiceImpl implements UserAuthService {
             return null;
         }
         UserInfo user = userInfoMapper.selectOne(new LambdaQueryWrapper<UserInfo>()
-                .eq(UserInfo::getIsDeleted, 0)
+                .eq(UserInfo::getIsDeleted, false)
                 .and(w -> w.eq(UserInfo::getUsername, usernameOrEmail)
                         .or()
                         .eq(UserInfo::getEmail, usernameOrEmail))
@@ -50,8 +52,7 @@ public class UserAuthServiceImpl implements UserAuthService {
         if (user == null) {
             return null;
         }
-        String hashed = MD5Util.encrypt(rawPassword);
-        if (user.getPassword() == null || !user.getPassword().equalsIgnoreCase(hashed)) {
+        if (user.getPassword() == null || !passwordEncoder.matches(rawPassword, user.getPassword())) {
             return null;
         }
         return user;
@@ -61,9 +62,9 @@ public class UserAuthServiceImpl implements UserAuthService {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", user.getId());
         m.put("username", user.getUsername());
-        m.put("avatarUrl", user.getAvatarUrl());
-        if (user.getCreateTime() != null) {
-            m.put("createTime", user.getCreateTime().getTime() / 1000L);
+        m.put("avatarUrl", null);
+        if (user.getCreatedAt() != null) {
+            m.put("createTime", user.getCreatedAt().toEpochSecond(ZoneOffset.UTC));
         } else {
             m.put("createTime", 0L);
         }

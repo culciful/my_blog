@@ -1,5 +1,6 @@
 package com.culciful.security;
 
+import com.culciful.common.enums.ResultCodeEnum;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
@@ -22,6 +23,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write("{\"errorCode\":401,\"message\":\"Unauthorized\"}");
+        response.getWriter().write("{\"errorCode\":" + ResultCodeEnum.NOT_LOGIN.getErrorCode()
+                + ",\"message\":\"" + ResultCodeEnum.NOT_LOGIN.getMessage() + "\"}");
     }
 }

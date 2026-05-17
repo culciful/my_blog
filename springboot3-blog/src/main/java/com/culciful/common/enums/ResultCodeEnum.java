@@ -1,17 +1,21 @@
-package com.culciful.common.enums;
+﻿package com.culciful.common.enums;
 
 /**
- * 统一返回结果状态信息类
+ * Unified API result status codes.
  */
 public enum ResultCodeEnum {
 
     SUCCESS(0, "success"),
-    USERNAME_ERROR(-501, "username error"),
-    PASSWORD_ERROR(-503, "password error"),
-    NOT_LOGIN(-504, "not login"),
-    USERNAME_USED(-505, "username used"),
-    SYSTEM_ERROR(-100000, "系统未知异常"),
-    PARAM_ERROR(-100001, "参数格式校验失败");
+    NOT_LOGIN(-10004, "not login"),
+    USERNAME_ERROR(-10005, "username error"),
+    PASSWORD_ERROR(-10006, "password error"),
+    USERNAME_USED(-10007, "username used"),
+    EMAIL_USED(-10008, "email already used"),
+    FORBIDDEN(-10009, "forbidden"),
+    NOT_FOUND(-10010, "resource not found"),
+    BUSINESS_ERROR(-10011, "business error"),
+    PARAM_ERROR(-10012, "param validation failed"),
+    SYSTEM_ERROR(-10013, "unknown system error");
 
     private final Integer errorCode;
     private final String message;

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 /**
 * @author culciful_zy
-* @description 针对表【blog_comment(评论表)】的数据库操作Service实现
+* @description Service implementation for database operations on the blog_comment table.
 * @createDate 2024-01-31 21:38:07
 */
 @Service

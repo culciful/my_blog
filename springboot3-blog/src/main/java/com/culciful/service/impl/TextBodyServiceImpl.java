@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 /**
 * @author culciful_zy
-* @description 针对表【text_body(文本存储表)】的数据库操作Service实现
+* @description Service implementation for database operations on the text_body table.
 * @createDate 2024-01-31 21:38:07
 */
 @Service

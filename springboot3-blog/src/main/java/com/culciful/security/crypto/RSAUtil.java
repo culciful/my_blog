@@ -15,8 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 备注，解密前台公钥加密的数据，请调用decryptWithPrivate方法
- * 每次重启之后，都会生成一对新的公私钥
+ * Use decryptWithPrivate to decrypt data encrypted by the frontend with the public key.
+ * A new RSA key pair is generated after each application restart.
  */
 public class RSAUtil {
 

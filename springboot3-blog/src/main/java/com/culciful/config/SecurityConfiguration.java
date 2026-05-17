@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -37,18 +39,15 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/getConf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user/register").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user/checkEmailExist").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user/checkEmailCode").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user/sendEmailCode").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/user/getUserInfo").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user/users/email-existence").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user/users/verification-codes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user/users/me/verification-check").permitAll()
                         .requestMatchers(HttpMethod.GET, "/user/users/{id:\\d+}").permitAll()
-                        .requestMatchers("/article/**").permitAll()
-                        .requestMatchers("/comment/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/article/tags").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/article/articles/{aid:\\d+}").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/article/articles/search").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/comment/articles/{aid:\\d+}/comments/search").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -58,6 +57,11 @@ public class SecurityConfiguration {
         }
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     private CorsConfigurationSource corsConfigurationSource() {

@@ -4,28 +4,55 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import lombok.Data;
+import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
- * @TableName user_package
+ * <p>
+ * User package table
+ * </p>
+ *
+ * @author culciful
+ * @since 2026-04-28
  */
-@TableName(value ="user_package")
-@Data
-public class UserPackage implements Serializable {
-    @TableId(type = IdType.INPUT)
-    private Integer id;
+@Getter
+@Setter
+@TableName("user_package")
+public class UserPackage {
+    /**
+     * Snowflake ID
+     */
+    @TableId(value = "id", type = IdType.INPUT)
+    private Long id;
 
-    private Integer packId;
+    /**
+     * User ID
+     */
+    @TableField("user_id")
+    private Long userId;
 
-    private Integer userId;
-
+    /**
+     * Package name
+     */
+    @TableField("pack_name")
     private String packName;
 
-    private Date updateTime;
+    /**
+     * Created time (UTC)
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 
-    private Integer isDeleted;
+    /**
+     * Updated time (UTC)
+     */
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 
-    private static final long serialVersionUID = 1L;
+    /**
+     * Deleted flag
+     */
+    @TableField("is_deleted")
+    private Boolean isDeleted;
 }
