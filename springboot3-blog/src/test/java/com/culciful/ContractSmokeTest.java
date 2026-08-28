@@ -29,17 +29,73 @@ class ContractSmokeTest {
 
     @Test
     void articleWriteRequiresAuthentication() throws Exception {
-        mockMvc.perform(post("/article/articles")
+        mockMvc.perform(post("/article/addArticle")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"title\":\"demo\",\"content\":\"body\"}"))
+                        .content("{\"title\":\"demo\",\"content\":\"body\",\"pid\":1,\"tags\":[\"t\"]}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value(-10004));
     }
 
     @Test
     void privateUserEndpointRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/user/users/me"))
+        mockMvc.perform(get("/user/getMyProfile"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
+    void emailExistenceReturnsBoolean() throws Exception {
+        mockMvc.perform(post("/user/checkEmailExist")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"contract-test@example.com\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(0))
+                .andExpect(jsonPath("$.result.isExisted").isBoolean());
+    }
+
+    @Test
+    void articleTagsReturnsList() throws Exception {
+        mockMvc.perform(get("/article/getTags"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(0))
+                .andExpect(jsonPath("$.result.list").isArray());
+    }
+
+    @Test
+    void articleSearchReturnsListAndTotal() throws Exception {
+        mockMvc.perform(post("/article/getArticleList")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"pageSize\":10,\"currentPage\":1,\"filter\":{}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(0))
+                .andExpect(jsonPath("$.result.list").isArray())
+                .andExpect(jsonPath("$.result.total").isNumber());
+    }
+
+    @Test
+    void unauthenticatedPasswordResetRequiresVerificationFields() throws Exception {
+        mockMvc.perform(post("/user/updateUserInfo")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"NewPass1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
+    void commentInboxRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/comment/getCommentInbox")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"pageSize\":10,\"currentPage\":1}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
+    void invalidVerificationCodePayloadReturnsParamError() throws Exception {
+        mockMvc.perform(post("/user/sendEmailCode")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-an-email\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(-10012));
     }
 }

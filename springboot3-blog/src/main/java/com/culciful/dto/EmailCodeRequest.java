@@ -11,5 +11,8 @@ public record EmailCodeRequest(
         String email,
 
         @Size(max = 16)
-        String verificationCode
+        String verificationCode,
+
+        @Size(max = 32)
+        String scene
 ) {}

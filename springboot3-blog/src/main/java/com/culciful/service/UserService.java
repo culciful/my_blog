@@ -9,5 +9,5 @@ public interface UserService {
 
     R<Void> register(RegisterRequest request);
 
-    R<Map<String, Integer>> checkEmailExist(EmailExistParam emailExistParam);
+    R<Map<String, Boolean>> checkEmailExist(EmailExistParam emailExistParam);
 }

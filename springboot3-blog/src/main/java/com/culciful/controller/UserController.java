@@ -10,6 +10,7 @@ import com.culciful.mapper.FileAssetMapper;
 import com.culciful.dto.EmailExistParam;
 import com.culciful.dto.EmailCodeRequest;
 import com.culciful.dto.FollowStateRequest;
+import com.culciful.dto.PackageRefRequest;
 import com.culciful.dto.PackageRequest;
 import com.culciful.dto.PageSearchRequest;
 import com.culciful.dto.PasswordCheckRequest;
@@ -19,6 +20,7 @@ import com.culciful.pojo.UserInfo;
 import com.culciful.pojo.UserFollow;
 import com.culciful.pojo.UserPackage;
 import com.culciful.pojo.FileAsset;
+import com.culciful.service.EmailVerificationCodeService;
 import com.culciful.service.UserService;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
@@ -30,14 +32,11 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,6 +44,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.Base64;
 import java.time.ZoneOffset;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -52,7 +52,6 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author culciful_zy
  * @version 1.0
@@ -64,20 +63,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("user")
 @RequiredArgsConstructor
 public class UserController {
-    private static final Map<String, String> DEV_EMAIL_CODES = new ConcurrentHashMap<>();
-
     private final UserInfoMapper userInfoMapper;
     private final UserFollowMapper userFollowMapper;
     private final UserPackageMapper userPackageMapper;
     private final FileAssetMapper fileAssetMapper;
     private final UserService userService;
+    private final EmailVerificationCodeService emailVerificationCodeService;
     private final PasswordEncoder passwordEncoder;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
 
     /**
      * register
      */
-    @PostMapping(value = "users", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = "register", consumes = MediaType.TEXT_PLAIN_VALUE)
     public R<Void> registerEncrypted(@EncryptedBody @Valid RegisterRequest req) {
         return userService.register(req);
     }
@@ -85,16 +83,16 @@ public class UserController {
     /**
      * Check whether email already exists.
      */
-    @PostMapping("users/email-existence")
-    public R<Map<String, Integer>> checkEmailExist(@RequestBody @Valid EmailExistParam emailExistParam) {
+    @PostMapping("checkEmailExist")
+    public R<Map<String, Boolean>> checkEmailExist(@RequestBody @Valid EmailExistParam emailExistParam) {
         return userService.checkEmailExist(emailExistParam);
     }
 
     /**
      * Public profile query by id.
      */
-    @GetMapping("users/{id:\\d+}")
-    public R<Map<String, Object>> getUserPublicProfile(@PathVariable("id") String idParam) {
+    @GetMapping("getUserInfo")
+    public R<Map<String, Object>> getUserPublicProfile(@RequestParam("id") String idParam) {
         Long targetId = parseId(idParam);
         if (targetId == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
@@ -109,7 +107,7 @@ public class UserController {
     /**
      * Current logged-in user profile, requires JWT.
      */
-    @GetMapping("users/me")
+    @GetMapping("getMyProfile")
     public R<Map<String, Object>> getMyProfile() {
         Long selfId = currentUserId();
         if (selfId == null) {
@@ -124,27 +122,27 @@ public class UserController {
         return R.ok(m);
     }
 
-    @PatchMapping(value = "users/me", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "updateUserInfo", consumes = MediaType.APPLICATION_JSON_VALUE)
     public R<Void> updateMyProfile(@RequestBody @Valid UserUpdateRequest request) {
         return doUpdateMyProfile(request);
     }
 
-    @PatchMapping(value = "users/me", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = "updateUserInfo", consumes = MediaType.TEXT_PLAIN_VALUE)
     public R<Void> updateMyProfileEncrypted(@EncryptedBody @Valid UserUpdateRequest request) {
         return doUpdateMyProfile(request);
     }
 
-    @PostMapping(value = "users/me/password-check", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "checkPassword", consumes = MediaType.APPLICATION_JSON_VALUE)
     public R<Void> checkPassword(@RequestBody @Valid PasswordCheckRequest request) {
         return doCheckPassword(request);
     }
 
-    @PostMapping(value = "users/me/password-check", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = "checkPassword", consumes = MediaType.TEXT_PLAIN_VALUE)
     public R<Void> checkPasswordEncrypted(@EncryptedBody @Valid PasswordCheckRequest request) {
         return doCheckPassword(request);
     }
 
-    @GetMapping("users/me/stats")
+    @GetMapping("getStat")
     public R<Map<String, Object>> getMyStats() {
         Long selfId = currentUserId();
         if (selfId == null) {
@@ -160,56 +158,57 @@ public class UserController {
         return R.ok(Map.of("articleCount", articleCount, "following", following, "follower", follower));
     }
 
-    @PostMapping("users/me/followings/search")
+    @PostMapping("getFollowings")
     public R<Map<String, Object>> searchMyFollowings(@RequestBody @Valid PageSearchRequest request) {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        Page<UserFollow> page = userFollowMapper.selectPage(new Page<>(request.safeCurrentPage(), request.safePageSize()),
-                new LambdaQueryWrapper<UserFollow>().eq(UserFollow::getFollowerId, selfId)
-                        .orderByDesc(UserFollow::getCreatedAt));
-        return R.ok(userPageResult(page, true, request.safeFilter().get("keyword"), selfId));
+        return R.ok(followPageResult(selfId, true, request));
     }
 
-    @PostMapping("users/me/followers/search")
+    @PostMapping("getFollowers")
     public R<Map<String, Object>> searchMyFollowers(@RequestBody @Valid PageSearchRequest request) {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        Page<UserFollow> page = userFollowMapper.selectPage(new Page<>(request.safeCurrentPage(), request.safePageSize()),
-                new LambdaQueryWrapper<UserFollow>().eq(UserFollow::getFollowingId, selfId)
-                        .orderByDesc(UserFollow::getCreatedAt));
-        return R.ok(userPageResult(page, false, request.safeFilter().get("keyword"), selfId));
+        return R.ok(followPageResult(selfId, false, request));
     }
 
-    @PostMapping("users/verification-codes")
+    @PostMapping("sendEmailCode")
     public R<Void> sendEmailCode(@RequestBody @Valid EmailCodeRequest request) {
-        if (request == null || isBlank(request.email())) {
-            return R.fail(ResultCodeEnum.PARAM_ERROR);
+        String reason = emailVerificationCodeService.sendCode(request.email(), sceneOrDefault(request.scene()));
+        if (reason == null) {
+            return R.ok(null);
         }
-        DEV_EMAIL_CODES.put(request.email(), "123456");
-        System.out.println("dev email verification code for " + request.email() + ": 123456");
-        return R.ok(null);
+        return switch (reason) {
+            case "EMAIL_USED" -> R.fail(ResultCodeEnum.EMAIL_USED);
+            case "EMAIL_NOT_FOUND" -> R.fail(ResultCodeEnum.USERNAME_ERROR);
+            case "RATE_LIMIT" -> R.fail(ResultCodeEnum.BUSINESS_ERROR);
+            default -> R.fail(ResultCodeEnum.BUSINESS_ERROR);
+        };
     }
 
-    @PostMapping("users/me/verification-check")
+    @PostMapping("checkEmailCode")
     public R<Void> checkEmailCode(@RequestBody @Valid EmailCodeRequest request) {
         if (request == null || isBlank(request.email()) || isBlank(request.verificationCode())) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
-        String code = DEV_EMAIL_CODES.get(request.email());
-        return request.verificationCode().equals(code) ? R.ok(null) : R.fail(ResultCodeEnum.PARAM_ERROR);
+        return emailVerificationCodeService.verifyCode(request.email(), request.verificationCode(), sceneOrDefault(request.scene()))
+                ? R.ok(null)
+                : R.fail(ResultCodeEnum.PARAM_ERROR);
     }
 
-    @PostMapping("users/me/avatar")
-    public R<Void> uploadAvatar(MultipartFile file) throws Exception {
+    @PostMapping("uploadAvatar")
+    public R<Void> uploadAvatar(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "image", required = false) String image) throws Exception {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        FileAsset asset = saveUpload(file, selfId, "avatar");
+        FileAsset asset = resolveAvatarAsset(file, image, selfId);
         UserInfo user = new UserInfo();
         user.setId(selfId);
         user.setAvatarAssetId(asset.getId());
@@ -218,8 +217,8 @@ public class UserController {
         return R.ok(null);
     }
 
-    @GetMapping("users/{id:\\d+}/follow-state")
-    public R<Map<String, Boolean>> getFollowState(@PathVariable("id") String idParam) {
+    @GetMapping("checkHasFollow")
+    public R<Map<String, Boolean>> getFollowState(@RequestParam("id") String idParam) {
         Long selfId = currentUserId();
         Long targetId = parseId(idParam);
         if (selfId == null) {
@@ -234,10 +233,10 @@ public class UserController {
         return R.ok(Map.of("data", followed));
     }
 
-    @PutMapping("users/{id:\\d+}/follow-state")
-    public R<Void> setFollowState(@PathVariable("id") String idParam, @RequestBody @Valid FollowStateRequest request) {
+    @PostMapping("switchFollow")
+    public R<Void> setFollowState(@RequestBody @Valid FollowStateRequest request) {
         Long selfId = currentUserId();
-        Long targetId = parseId(idParam);
+        Long targetId = parseId(request.id());
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
@@ -263,8 +262,8 @@ public class UserController {
         return R.ok(null);
     }
 
-    @GetMapping("users/{id:\\d+}/packages")
-    public R<Map<String, Object>> getPackages(@PathVariable("id") String idParam) {
+    @GetMapping("getPackages")
+    public R<Map<String, Object>> getPackages(@RequestParam("id") String idParam) {
         Long userId = parseId(idParam);
         if (userId == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
@@ -279,10 +278,10 @@ public class UserController {
         return R.ok(Map.of("list", list));
     }
 
-    @PostMapping("users/{id:\\d+}/packages")
-    public R<Map<String, Long>> addPackage(@PathVariable("id") String idParam, @RequestBody @Valid PackageRequest request) {
+    @PostMapping("addPackage")
+    public R<Map<String, Long>> addPackage(@RequestBody @Valid PackageRequest request) {
         Long selfId = currentUserId();
-        Long userId = parseId(idParam);
+        Long userId = parseId(request.id());
         if (!isSelf(selfId, userId) || request == null || isBlank(request.pname())) {
             return R.fail(selfId == null ? ResultCodeEnum.NOT_LOGIN : ResultCodeEnum.PARAM_ERROR);
         }
@@ -297,12 +296,11 @@ public class UserController {
         return R.ok(Map.of("pid", p.getId()));
     }
 
-    @PatchMapping("users/{id:\\d+}/packages/{pid:\\d+}")
-    public R<Void> editPackage(@PathVariable("id") String idParam, @PathVariable("pid") String pidParam,
-                               @RequestBody @Valid PackageRequest request) {
+    @PostMapping("editPackage")
+    public R<Void> editPackage(@RequestBody @Valid PackageRequest request) {
         Long selfId = currentUserId();
-        Long userId = parseId(idParam);
-        Long pid = parseId(pidParam);
+        Long userId = parseId(request.id());
+        Long pid = parseId(request.pid());
         if (!isSelf(selfId, userId) || pid == null || request == null || isBlank(request.pname())) {
             return R.fail(selfId == null ? ResultCodeEnum.NOT_LOGIN : ResultCodeEnum.PARAM_ERROR);
         }
@@ -317,11 +315,11 @@ public class UserController {
         return R.ok(null);
     }
 
-    @DeleteMapping("users/{id:\\d+}/packages/{pid:\\d+}")
-    public R<Void> deletePackage(@PathVariable("id") String idParam, @PathVariable("pid") String pidParam) {
+    @PostMapping("deletePackage")
+    public R<Void> deletePackage(@RequestBody @Valid PackageRefRequest request) {
         Long selfId = currentUserId();
-        Long userId = parseId(idParam);
-        Long pid = parseId(pidParam);
+        Long userId = parseId(request.id());
+        Long pid = parseId(request.pid());
         if (!isSelf(selfId, userId) || pid == null) {
             return R.fail(selfId == null ? ResultCodeEnum.NOT_LOGIN : ResultCodeEnum.PARAM_ERROR);
         }
@@ -335,11 +333,11 @@ public class UserController {
 
     private R<Void> doUpdateMyProfile(UserUpdateRequest request) {
         Long selfId = currentUserId();
-        if (selfId == null) {
-            return R.fail(ResultCodeEnum.NOT_LOGIN);
-        }
         if (request == null || (isBlank(request.username()) && isBlank(request.email()) && isBlank(request.password()))) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
+        }
+        if (selfId == null) {
+            return resetPasswordByEmail(request);
         }
         UserInfo user = new UserInfo();
         user.setId(selfId);
@@ -347,11 +345,41 @@ public class UserController {
             user.setUsername(request.username());
         }
         if (!isBlank(request.email())) {
+            if (isBlank(request.verificationCode())
+                    || !emailVerificationCodeService.consumeCode(
+                    request.email(),
+                    request.verificationCode(),
+                    EmailVerificationCodeService.SCENE_UPDATE_EMAIL)) {
+                return R.fail(ResultCodeEnum.PARAM_ERROR);
+            }
             user.setEmail(request.email());
         }
         if (!isBlank(request.password())) {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
+        user.setUpdatedAt(LocalDateTime.now());
+        userInfoMapper.updateById(user);
+        return R.ok(null);
+    }
+
+    private R<Void> resetPasswordByEmail(UserUpdateRequest request) {
+        if (isBlank(request.email()) || isBlank(request.password()) || isBlank(request.verificationCode())) {
+            return R.fail(ResultCodeEnum.NOT_LOGIN);
+        }
+        if (!emailVerificationCodeService.consumeCode(
+                request.email(),
+                request.verificationCode(),
+                EmailVerificationCodeService.SCENE_RESET_PASSWORD)) {
+            return R.fail(ResultCodeEnum.PARAM_ERROR);
+        }
+        UserInfo user = userInfoMapper.selectOne(new LambdaQueryWrapper<UserInfo>()
+                .eq(UserInfo::getEmail, request.email())
+                .eq(UserInfo::getIsDeleted, false)
+                .last("LIMIT 1"));
+        if (user == null) {
+            return R.fail(ResultCodeEnum.USERNAME_ERROR);
+        }
+        user.setPassword(passwordEncoder.encode(request.password()));
         user.setUpdatedAt(LocalDateTime.now());
         userInfoMapper.updateById(user);
         return R.ok(null);
@@ -388,16 +416,33 @@ public class UserController {
         return m;
     }
 
-    private Map<String, Object> userPageResult(Page<UserFollow> page, boolean followingPage, Object keyword, Long selfId) {
+    private Map<String, Object> followPageResult(Long selfId, boolean followingPage, PageSearchRequest request) {
+        Object keyword = request.safeFilter().get("keyword");
         String kw = keyword == null ? "" : keyword.toString().trim();
+        LambdaQueryWrapper<UserFollow> wrapper = new LambdaQueryWrapper<UserFollow>()
+                .eq(followingPage ? UserFollow::getFollowerId : UserFollow::getFollowingId, selfId)
+                .orderByDesc(UserFollow::getCreatedAt);
+        if (!kw.isEmpty()) {
+            List<Long> matchedUserIds = userInfoMapper.selectList(new LambdaQueryWrapper<UserInfo>()
+                            .eq(UserInfo::getIsDeleted, false)
+                            .and(w -> w.like(UserInfo::getUsername, kw).or().like(UserInfo::getEmail, kw)))
+                    .stream()
+                    .map(UserInfo::getId)
+                    .toList();
+            if (matchedUserIds.isEmpty()) {
+                return Map.of("list", List.of(), "total", 0);
+            }
+            wrapper.in(followingPage ? UserFollow::getFollowingId : UserFollow::getFollowerId, matchedUserIds);
+        }
+        Page<UserFollow> page = userFollowMapper.selectPage(
+                new Page<>(request.safeCurrentPage(), request.safePageSize()),
+                wrapper
+        );
         List<Map<String, Object>> list = new ArrayList<>();
         for (UserFollow relation : page.getRecords()) {
             Long userId = followingPage ? relation.getFollowingId() : relation.getFollowerId();
             UserInfo user = loadActiveUser(userId);
             if (user == null) {
-                continue;
-            }
-            if (!kw.isEmpty() && !user.getUsername().contains(kw) && !user.getEmail().contains(kw)) {
                 continue;
             }
             Map<String, Object> m = toPublicProfile(user);
@@ -428,6 +473,23 @@ public class UserController {
         }
         FileAsset asset = fileAssetMapper.selectById(avatarAssetId);
         return asset == null ? null : asset.getPublicUrl();
+    }
+
+    private FileAsset resolveAvatarAsset(MultipartFile file, String image, Long ownerId) throws Exception {
+        if (!isBlank(image)) {
+            return saveBase64Upload(image, ownerId, "avatar");
+        }
+        if (file != null && !file.isEmpty()) {
+            String original = file.getOriginalFilename();
+            if (original == null || original.isBlank()) {
+                String text = new String(file.getBytes());
+                if (text.startsWith("data:")) {
+                    return saveBase64Upload(text, ownerId, "avatar");
+                }
+            }
+            return saveUpload(file, ownerId, "avatar");
+        }
+        throw new IllegalArgumentException("file is required");
     }
 
     private FileAsset saveUpload(MultipartFile file, Long ownerId, String type) throws Exception {
@@ -462,6 +524,55 @@ public class UserController {
         asset.setUpdatedAt(LocalDateTime.now());
         fileAssetMapper.insert(asset);
         return asset;
+    }
+
+    private FileAsset saveBase64Upload(String dataUrl, Long ownerId, String type) throws Exception {
+        if (isBlank(dataUrl)) {
+            throw new IllegalArgumentException("file is required");
+        }
+        String mimeType = "image/png";
+        String payload = dataUrl;
+        if (dataUrl.startsWith("data:")) {
+            int semicolon = dataUrl.indexOf(';');
+            int comma = dataUrl.indexOf(',');
+            if (semicolon > 5) {
+                mimeType = dataUrl.substring(5, semicolon);
+            }
+            if (comma > -1) {
+                payload = dataUrl.substring(comma + 1);
+            }
+        }
+        byte[] bytes = Base64.getDecoder().decode(payload);
+        String ext = switch (mimeType) {
+            case "image/jpeg", "image/jpg" -> ".jpg";
+            case "image/webp" -> ".webp";
+            default -> ".png";
+        };
+        long id = snowflakeIdGenerator.nextId();
+        Path dir = Path.of("uploads", type);
+        Files.createDirectories(dir);
+        Path target = dir.resolve(id + ext).normalize();
+        Files.write(target, bytes);
+        FileAsset asset = new FileAsset();
+        asset.setId(id);
+        asset.setOwnerUserId(ownerId);
+        asset.setAssetType(type);
+        asset.setProvider("local");
+        asset.setBucket(null);
+        asset.setStorageKey(target.toString().replace('\\', '/'));
+        asset.setPublicUrl("/uploads/" + type + "/" + target.getFileName());
+        asset.setMimeType(mimeType);
+        asset.setSizeBytes((long) bytes.length);
+        asset.setContentHash(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
+        asset.setStatus(1);
+        asset.setCreatedAt(LocalDateTime.now());
+        asset.setUpdatedAt(LocalDateTime.now());
+        fileAssetMapper.insert(asset);
+        return asset;
+    }
+
+    private String sceneOrDefault(String scene) {
+        return isBlank(scene) ? EmailVerificationCodeService.SCENE_REGISTER : scene;
     }
 
     private static boolean isBlank(String s) {

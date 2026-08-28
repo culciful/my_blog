@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
+import com.culciful.dto.CommentRefRequest;
 import com.culciful.dto.CommentRequest;
+import com.culciful.dto.CommentSearchRequest;
 import com.culciful.dto.PageSearchRequest;
 import com.culciful.mapper.BlogCommentMapper;
 import com.culciful.mapper.BlogMapper;
@@ -23,9 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,7 +50,7 @@ public class CommentController {
     private final FileAssetMapper fileAssetMapper;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
 
-    @PostMapping("/comments/inbox/search")
+    @PostMapping("/getCommentInbox")
     public R<Map<String, Object>> inbox(@RequestBody @Valid PageSearchRequest request) {
         Long selfId = currentUserId();
         if (selfId == null) {
@@ -67,13 +66,13 @@ public class CommentController {
         return R.ok(Map.of("list", list, "total", page.getTotal()));
     }
 
-    @PostMapping("/articles/{aid:\\d+}/comments/search")
-    public R<Map<String, Object>> search(@PathVariable("aid") String aidParam, @RequestBody @Valid PageSearchRequest request) {
-        Long aid = longValue(aidParam);
+    @PostMapping("/getComments")
+    public R<Map<String, Object>> search(@RequestBody @Valid CommentSearchRequest request) {
+        Long aid = request.aid();
         if (aid == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
-        Long root = longValue(request.safeFilter().get("root"));
+        Long root = request.root();
         LambdaQueryWrapper<BlogComment> wrapper = new LambdaQueryWrapper<BlogComment>()
                 .eq(BlogComment::getBlogId, aid)
                 .eq(BlogComment::getIsDeleted, false)
@@ -88,11 +87,11 @@ public class CommentController {
         return R.ok(Map.of("list", list, "total", page.getTotal()));
     }
 
-    @PostMapping("/articles/{aid:\\d+}/comments")
+    @PostMapping("/addComment")
     @Transactional
-    public R<Void> add(@PathVariable("aid") String aidParam, @RequestBody @Valid CommentRequest request) {
+    public R<Void> add(@RequestBody @Valid CommentRequest request) {
         Long selfId = currentUserId();
-        Long aid = longValue(aidParam);
+        Long aid = request.aid();
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -127,12 +126,11 @@ public class CommentController {
         return R.ok(null);
     }
 
-    @PatchMapping("/articles/{aid:\\d+}/comments/{cid:\\d+}")
-    public R<Void> edit(@PathVariable("aid") String aidParam, @PathVariable("cid") String cidParam,
-                        @RequestBody @Valid CommentRequest request) {
+    @PostMapping("/editComment")
+    public R<Void> edit(@RequestBody @Valid CommentRequest request) {
         Long selfId = currentUserId();
-        Long aid = longValue(aidParam);
-        Long cid = longValue(cidParam);
+        Long aid = request.aid();
+        Long cid = request.cid();
         BlogComment comment = cid == null ? null : blogCommentMapper.selectById(cid);
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -157,11 +155,11 @@ public class CommentController {
         return R.ok(null);
     }
 
-    @DeleteMapping("/articles/{aid:\\d+}/comments/{cid:\\d+}")
-    public R<Void> delete(@PathVariable("aid") String aidParam, @PathVariable("cid") String cidParam) {
+    @PostMapping("/deleteComment")
+    public R<Void> delete(@RequestBody @Valid CommentRefRequest request) {
         Long selfId = currentUserId();
-        Long aid = longValue(aidParam);
-        Long cid = longValue(cidParam);
+        Long aid = request.aid();
+        Long cid = request.cid();
         BlogComment comment = cid == null ? null : blogCommentMapper.selectById(cid);
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
         if (selfId == null) {
@@ -196,12 +194,25 @@ public class CommentController {
         m.put("content", Map.of("msg", text == null ? "" : text.getBody()));
         m.put("member", member(comment.getUserId()));
         m.put("parent", comment.getParentId());
+        m.put("parentContent", parentContent(comment.getParentId()));
         m.put("root", comment.getRootId());
         long childCount = blogCommentMapper.selectCount(new LambdaQueryWrapper<BlogComment>()
                 .eq(BlogComment::getRootId, comment.getId())
                 .eq(BlogComment::getIsDeleted, false));
         m.put("comments", Map.of("list", List.of(), "total", childCount));
         return m;
+    }
+
+    private Map<String, Object> parentContent(Long parentId) {
+        if (parentId == null) {
+            return Map.of("msg", "");
+        }
+        BlogComment parent = blogCommentMapper.selectById(parentId);
+        if (parent == null || Boolean.TRUE.equals(parent.getIsDeleted())) {
+            return Map.of("msg", "");
+        }
+        TextBody text = textBodyMapper.selectById(parent.getContentTextId());
+        return Map.of("msg", text == null ? "" : text.getBody());
     }
 
     private Map<String, Object> member(Long userId) {

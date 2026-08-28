@@ -17,9 +17,9 @@ public record LoginRequest(
         String username,
 
         @NotBlank(message = "password is required")
-        @Size(min = 6, max = 32, message = "password length must be between 6 and 32")
+        @Size(min = 6, max = 64, message = "password length must be between 6 and 64")
         @Pattern(
-                regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{6,32}$",
+                regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{6,64}$",
                 message = "password format is invalid"
         )
         String password

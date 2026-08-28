@@ -9,6 +9,9 @@ import java.util.List;
 public record ArticleRequest(
         Long id,
 
+        /** article id (RPC style: carried in body instead of the URL path), required for editArticle */
+        Long aid,
+
         @NotBlank
         @Size(max = 64)
         String title,

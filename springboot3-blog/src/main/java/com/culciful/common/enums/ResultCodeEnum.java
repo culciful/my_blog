@@ -1,4 +1,4 @@
-﻿package com.culciful.common.enums;
+package com.culciful.common.enums;
 
 /**
  * Unified API result status codes.

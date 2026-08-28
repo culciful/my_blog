@@ -7,6 +7,7 @@ import com.culciful.dto.EmailExistParam;
 import com.culciful.dto.RegisterRequest;
 import com.culciful.mapper.UserInfoMapper;
 import com.culciful.pojo.UserInfo;
+import com.culciful.service.EmailVerificationCodeService;
 import com.culciful.service.UserService;
 import com.culciful.utils.SnowflakeIdGenerator;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +27,17 @@ public class UserServiceImpl implements UserService {
     private final UserInfoMapper userInfoMapper;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
     private final PasswordEncoder passwordEncoder;
+    private final EmailVerificationCodeService emailVerificationCodeService;
 
     @Override
     @Transactional
     public R<Void> register(RegisterRequest request) {
+        if (!emailVerificationCodeService.consumeCode(
+                request.email(),
+                request.verificationCode(),
+                EmailVerificationCodeService.SCENE_REGISTER)) {
+            return R.fail(ResultCodeEnum.PARAM_ERROR);
+        }
         boolean emailExists = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getIsDeleted, false)
                 .eq(UserInfo::getEmail, request.email())) > 0;
@@ -72,12 +80,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public R<Map<String, Integer>> checkEmailExist(EmailExistParam emailExistParam) {
+    public R<Map<String, Boolean>> checkEmailExist(EmailExistParam emailExistParam) {
         Long count = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getEmail, emailExistParam.email())
                 .eq(UserInfo::getIsDeleted, false));
-        Map<String, Integer> data = new HashMap<>();
-        data.put("isExisted", count > 0 ? 1 : 0);
+        Map<String, Boolean> data = new HashMap<>();
+        data.put("isExisted", count > 0);
         return R.ok(data);
     }
 }

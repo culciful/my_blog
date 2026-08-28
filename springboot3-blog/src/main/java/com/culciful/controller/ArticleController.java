@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
+import com.culciful.dto.ArticleRefRequest;
 import com.culciful.dto.ArticleRequest;
 import com.culciful.dto.PageSearchRequest;
 import com.culciful.mapper.BlogMapper;
@@ -13,25 +14,25 @@ import com.culciful.mapper.BlogTagRelationMapper;
 import com.culciful.mapper.FileAssetMapper;
 import com.culciful.mapper.TextBodyMapper;
 import com.culciful.mapper.UserInfoMapper;
+import com.culciful.mapper.UserPackageMapper;
 import com.culciful.pojo.Blog;
 import com.culciful.pojo.BlogTag;
 import com.culciful.pojo.BlogTagRelation;
 import com.culciful.pojo.FileAsset;
 import com.culciful.pojo.TextBody;
 import com.culciful.pojo.UserInfo;
+import com.culciful.pojo.UserPackage;
 import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -59,10 +60,11 @@ public class ArticleController {
     private final BlogTagMapper blogTagMapper;
     private final BlogTagRelationMapper blogTagRelationMapper;
     private final UserInfoMapper userInfoMapper;
+    private final UserPackageMapper userPackageMapper;
     private final FileAssetMapper fileAssetMapper;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
 
-    @GetMapping("/tags")
+    @GetMapping("/getTags")
     public R<Map<String, Object>> tags() {
         List<String> list = blogTagMapper.selectList(new LambdaQueryWrapper<BlogTag>().orderByAsc(BlogTag::getTag))
                 .stream()
@@ -71,7 +73,7 @@ public class ArticleController {
         return R.ok(Map.of("list", list));
     }
 
-    @PostMapping("/articles/search")
+    @PostMapping("/getArticleList")
     public R<Map<String, Object>> search(@RequestBody @Valid PageSearchRequest request) {
         LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<Blog>()
                 .eq(Blog::getIsDeleted, false)
@@ -102,8 +104,8 @@ public class ArticleController {
         return R.ok(Map.of("list", list, "total", page.getTotal()));
     }
 
-    @GetMapping("/articles/{aid:\\d+}")
-    public R<Map<String, Object>> detail(@PathVariable("aid") String aidParam) {
+    @GetMapping("/getArticleInfo")
+    public R<Map<String, Object>> detail(@RequestParam("aid") String aidParam) {
         Long aid = longFilter(aidParam);
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
         if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted())) {
@@ -115,7 +117,7 @@ public class ArticleController {
         return R.ok(articleDetail(blog));
     }
 
-    @PostMapping("/articles")
+    @PostMapping("/addArticle")
     @Transactional
     public R<Map<String, Long>> add(@RequestBody @Valid ArticleRequest request) {
         Long selfId = currentUserId();
@@ -147,11 +149,11 @@ public class ArticleController {
         return R.ok(Map.of("id", blogId));
     }
 
-    @PatchMapping("/articles/{aid:\\d+}")
+    @PostMapping("/editArticle")
     @Transactional
-    public R<Map<String, Long>> edit(@PathVariable("aid") String aidParam, @RequestBody @Valid ArticleRequest request) {
+    public R<Map<String, Long>> edit(@RequestBody @Valid ArticleRequest request) {
         Long selfId = currentUserId();
-        Long aid = longFilter(aidParam);
+        Long aid = request.aid();
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -179,10 +181,10 @@ public class ArticleController {
         return R.ok(Map.of("id", aid));
     }
 
-    @DeleteMapping("/articles/{aid:\\d+}")
-    public R<Void> delete(@PathVariable("aid") String aidParam) {
+    @PostMapping("/deleteArticle")
+    public R<Void> delete(@RequestBody @Valid ArticleRefRequest request) {
         Long selfId = currentUserId();
-        Long aid = longFilter(aidParam);
+        Long aid = request.aid();
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -203,7 +205,7 @@ public class ArticleController {
         return R.ok(null);
     }
 
-    @PostMapping("/articles/images")
+    @PostMapping("/uploadImage")
     public R<Map<String, String>> uploadImage(MultipartFile file) throws Exception {
         Long selfId = currentUserId();
         if (selfId == null) {
@@ -231,9 +233,21 @@ public class ArticleController {
         TextBody text = textBodyMapper.selectById(blog.getContentTextId());
         m.put("content", text == null ? "" : text.getBody());
         m.put("pid", blog.getPackageId());
+        m.put("package", articlePackage(blog.getPackageId()));
         m.put("tags", tagsByBlog(blog.getId()));
         m.put("comments", Map.of("list", List.of(), "total", blog.getCommentCount() == null ? 0 : blog.getCommentCount()));
         return m;
+    }
+
+    private Map<String, Object> articlePackage(Long packageId) {
+        if (packageId == null || packageId == 0) {
+            return Map.of("pid", 0, "pname", "All");
+        }
+        UserPackage userPackage = userPackageMapper.selectById(packageId);
+        if (userPackage == null) {
+            return Map.of("pid", packageId, "pname", "");
+        }
+        return Map.of("pid", userPackage.getId(), "pname", userPackage.getPackName());
     }
 
     private Map<String, Object> member(Long userId) {
