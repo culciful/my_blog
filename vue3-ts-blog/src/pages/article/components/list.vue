@@ -113,7 +113,7 @@ const deleteHandler = (articleId) => {
         t('infoMessage.confirmDeleteArticle'),
         t('label.tip')
     ).then(() => {
-        proxy.$request.delete(ArticleConstant.url.delete(articleId)).then(() => {
+        proxy.$request.post(ArticleConstant.url.delete, { [ArticleConstant.articleId]: articleId }).then(() => {
             ElMessage.success(t('infoMessage.deleteSuccess'));
             currentPage.value = 1;
             getArticleList();

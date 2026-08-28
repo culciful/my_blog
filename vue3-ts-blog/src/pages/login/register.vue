@@ -111,7 +111,8 @@ const send = () => {
     hasSendCode.value = true;
     setCountdownTimer();
     proxy.$request.post(Constant.url.sendEmailCode, {
-        [Constant.email]: registerForm.email
+        [Constant.email]: registerForm.email,
+        [Constant.scene]: 'register'
     }).catch(err => {
         hasSendCode.value = false;
         if(interval) clearInterval(interval);
@@ -136,7 +137,8 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
             proxy.$request.post(Constant.url.register, {
                 [Constant.email]: registerForm.email,
                 [Constant.username]: registerForm.username,
-                [Constant.password]: registerForm.password
+                [Constant.password]: registerForm.password,
+                [Constant.verificationCode]: registerForm.verificationCode
             }).then(res => {
                 isQuerying.value = false;
                 router.push({ path: '/login' });

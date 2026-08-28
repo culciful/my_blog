@@ -2,24 +2,22 @@ const moduleName = 'comment';
 const makeUrl = (str: string) => {
     return `/${moduleName}/${str}`;
 };
-const join = (...parts: (string | number)[]) => makeUrl(parts.join('/'));
 
 const urlMap = {
-    articles: 'articles',
-    comments: 'comments',
-    search: 'search',
-    inbox: 'inbox'
+    getCommentInbox: 'getCommentInbox',
+    getComments: 'getComments',
+    addComment: 'addComment',
+    editComment: 'editComment',
+    deleteComment: 'deleteComment'
 };
 
 const constant = {
     url: {
-        commentsInboxSearch: join(urlMap.comments, urlMap.inbox, urlMap.search),
-        commentsByArticleSearch: (articleId: string | number) =>
-            join(urlMap.articles, String(articleId), urlMap.comments, urlMap.search),
-        articleComments: (articleId: string | number) =>
-            join(urlMap.articles, String(articleId), urlMap.comments),
-        articleComment: (articleId: string | number, commentId: string | number) =>
-            join(urlMap.articles, String(articleId), urlMap.comments, String(commentId))
+        commentsInboxSearch: makeUrl(urlMap.getCommentInbox),
+        commentsByArticleSearch: makeUrl(urlMap.getComments),
+        addComment: makeUrl(urlMap.addComment),
+        editComment: makeUrl(urlMap.editComment),
+        deleteComment: makeUrl(urlMap.deleteComment)
     },
     userId: 'id',
     authorId: 'authorId',

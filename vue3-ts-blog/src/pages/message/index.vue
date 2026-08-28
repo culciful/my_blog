@@ -92,7 +92,6 @@ const handleCurrentChange = (val: number) => {
 
 const getByUserId = () => {
     proxy.$request.post(Constant.url.commentsInboxSearch, {
-        [Constant.userId]: userStore.id,
         pageSize: pageSize.value,
         currentPage: currentPage.value,
     }).then(res => {

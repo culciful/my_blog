@@ -19,7 +19,7 @@ export const globalRules = {
     ],
     password: [
         {required: true, message: t('inputMessage.passwordFormat'), trigger: 'change'},
-        { min: 6, max: 32, message: t('inputMessage.passwordFormat'), trigger: 'blur' },
+        { min: 6, max: 64, message: t('inputMessage.passwordFormat'), trigger: 'blur' },
         { pattern: patterns.password, message: t('inputMessage.passwordFormat'), trigger: 'blur' }
     ],
     email: [

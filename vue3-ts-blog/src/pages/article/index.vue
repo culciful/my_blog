@@ -117,7 +117,7 @@ const computedPackage = computed(() => {
     };
 });
 const getArticleInfo = () => {
-    proxy.$request.get(ArticleConstant.url.getArticleInfo(props.articleId)).then(({result}) => {
+    proxy.$request.get(ArticleConstant.url.getArticleInfo, { [ArticleConstant.articleId]: props.articleId }).then(({result}) => {
         setReactiveData(article, result);
         nextTick(() => {
             getAnchors();
@@ -129,7 +129,8 @@ const totalCount = ref(0);
 const currentPage = ref(1);
 const comments = ref([]);
 const getComment = () => {
-    proxy.$request.post(CommentConstant.url.commentsByArticleSearch(props.articleId), {
+    proxy.$request.post(CommentConstant.url.commentsByArticleSearch, {
+        [CommentConstant.articleId]: props.articleId,
         pageSize,
         currentPage: currentPage.value
     }).then(({result}) => {

@@ -145,7 +145,8 @@ const childTotal = ref(0);
 const currentPage = ref(1);
 const childCommentList = ref([]);
 const getChildComment = () => {
-    proxy.$request.post(Constant.url.commentsByArticleSearch(props.comment[Constant.articleId]), {
+    proxy.$request.post(Constant.url.commentsByArticleSearch, {
+        [Constant.articleId]: props.comment[Constant.articleId],
         [Constant.root]: props.comment?.[Constant.commentId],
         pageSize,
         currentPage: currentPage.value
@@ -177,7 +178,10 @@ const deleteHandler = (id, row) => {
         t('infoMessage.confirmDeleteComment'),
         t('label.tip')
     ).then(() => {
-        proxy.$request.delete(Constant.url.articleComment(row[Constant.articleId], id)).then(() => {
+        proxy.$request.post(Constant.url.deleteComment, {
+            [Constant.articleId]: row[Constant.articleId],
+            [Constant.commentId]: id
+        }).then(() => {
             ElMessage.success(t('infoMessage.deleteSuccess'));
             if(id === props.comment?.[Constant.commentId]) {
                 emit('delete', id);

@@ -103,7 +103,7 @@ const publish = () => {
                 params[Constant.content][Constant.member] = props.parentComment[Constant.member];
             }
         }
-        proxy.$request.post(Constant.url.articleComments(props.articleId), params).then(() => {
+        proxy.$request.post(Constant.url.addComment, params).then(() => {
             ElMessage.success(t('infoMessage.publishSuccess'));
             emit('finish', params);
         });
@@ -113,10 +113,9 @@ const publish = () => {
         params[Constant.createTime] = (new Date().getTime() / 1000).toFixed();
         params[Constant.useMD] = useMD.value;
         params[Constant.content][Constant.msg] = newComment.value;
-        proxy.$request.patch(
-            Constant.url.articleComment(props.articleId, props.editComment[Constant.commentId]),
-            params
-        ).then(() => {
+        params[Constant.articleId] = props.articleId;
+        params[Constant.commentId] = props.editComment[Constant.commentId];
+        proxy.$request.post(Constant.url.editComment, params).then(() => {
             ElMessage.success(t('infoMessage.editSuccess'));
             emit('finish', params);
         });

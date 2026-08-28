@@ -126,7 +126,8 @@ const send = () => {
     hasSendCode.value = true;
     setCountdownTimer();
     proxy.$request.post(Constant.url.sendEmailCode, {
-        [Constant.email]: forgetPwdForm.email
+        [Constant.email]: forgetPwdForm.email,
+        [Constant.scene]: 'reset'
     }).catch(err => {
         hasSendCode.value = false;
         if(interval) clearInterval(interval);
@@ -150,7 +151,8 @@ const clickBtn = () => {
                 isQuerying.value = true;
                 proxy.$request.post(Constant.url.checkEmailCode, {
                     [Constant.email]: forgetPwdForm.email,
-                    [Constant.verificationCode]: forgetPwdForm.verificationCode
+                    [Constant.verificationCode]: forgetPwdForm.verificationCode,
+                    [Constant.scene]: 'reset'
                 }).then(res => {
                     isQuerying.value = false;
                     active.value++;
@@ -163,7 +165,9 @@ const clickBtn = () => {
         forgetPwdRef.value.validateField(['newPassword', 'confirmNewPwd'], valid => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.patch(Constant.url.updateUserInfo, {
+                proxy.$request.post(Constant.url.updateUserInfo, {
+                    [Constant.email]: forgetPwdForm.email,
+                    [Constant.verificationCode]: forgetPwdForm.verificationCode,
                     [Constant.password]: forgetPwdForm.newPassword
                 }).then(res => {
                     isQuerying.value = false;

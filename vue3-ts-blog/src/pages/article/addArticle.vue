@@ -125,7 +125,10 @@ const onSubmit =  (formEl: FormInstance | undefined) => {
                 [ArticleConstant.tags]: form.tags
             };
             const req = props.articleId
-                ? proxy.$request.patch(ArticleConstant.url.edit(props.articleId), payload)
+                ? proxy.$request.post(ArticleConstant.url.edit, {
+                    ...payload,
+                    [ArticleConstant.articleId]: props.articleId
+                })
                 : proxy.$request.post(ArticleConstant.url.add, payload);
             req.then(res => {
                 isQuerying.value = false;
@@ -140,7 +143,7 @@ const onSubmit =  (formEl: FormInstance | undefined) => {
 
 const packageOptions = ref([defaultPackage]);
 const getPackages = () => {
-    proxy.$request.get(UserConstant.url.getPackages(userStore.id)).then(res => {
+    proxy.$request.get(UserConstant.url.getPackages, { [UserConstant.userId]: userStore.id }).then(res => {
         packageOptions.value = [defaultPackage, ...res.result.list];
     });
 };
@@ -149,7 +152,8 @@ const addPackage = () => {
         inputPattern: /^\S.{0,63}$/,
         inputErrorMessage: t('inputMessage.invalidInput')
     }).then(({ value }) => {
-        proxy.$request.post(UserConstant.url.addPackage(userStore.id), {
+        proxy.$request.post(UserConstant.url.addPackage, {
+            [UserConstant.userId]: userStore.id,
             [UserConstant.packageName]: value
         }).then(res => {
             ElMessage({
@@ -183,7 +187,7 @@ function handleUploadImage(event, insertImage, files) {
 
 let originArticle = null;
 const getArticleInfo = () => {
-    proxy.$request.get(ArticleConstant.url.getArticleInfo(props.articleId)).then(({result}) => {
+    proxy.$request.get(ArticleConstant.url.getArticleInfo, { [ArticleConstant.articleId]: props.articleId }).then(({result}) => {
         originArticle = result;
         form.content = result[ArticleConstant.content];
         form.title = result[ArticleConstant.title];

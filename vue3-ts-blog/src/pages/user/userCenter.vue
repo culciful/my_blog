@@ -218,7 +218,8 @@ const send = () => {
     hasSendCode.value = true;
     setCountdownTimer();
     proxy.$request.post(Constant.url.sendEmailCode, {
-        [Constant.email]: userForm.email
+        [Constant.email]: userForm.email,
+        [Constant.scene]: 'update_email'
     }).catch(err => {
         hasSendCode.value = false;
         if(interval) clearInterval(interval);
@@ -241,7 +242,7 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
         await formEl.validateField('username', (valid) => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.patch(Constant.url.updateUserInfo, {
+                proxy.$request.post(Constant.url.updateUserInfo, {
                     [Constant.username]: userForm.username
                 }).then(res => {
                     isQuerying.value = false;
@@ -256,7 +257,7 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
         await formEl.validateField(['email', 'verificationCode'], (valid) => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.patch(Constant.url.updateUserInfo, {
+                proxy.$request.post(Constant.url.updateUserInfo, {
                     [Constant.email]: userForm.email,
                     [Constant.verificationCode]: userForm.verificationCode
                 }).then(res => {
@@ -275,7 +276,7 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
                 proxy.$request.post(Constant.url.checkPassword, {
                     [Constant.password]: userForm.password
                 }).then(() => {
-                    proxy.$request.patch(Constant.url.updateUserInfo, {
+                    proxy.$request.post(Constant.url.updateUserInfo, {
                         [Constant.password]: userForm.newPassword
                     }).then(() => {
                         isQuerying.value = false;
