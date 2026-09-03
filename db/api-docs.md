@@ -16,7 +16,7 @@
 - 标注“仅成功/失败”的接口，前端不消费 `result` 内容
 - **ID 字段是字符串**（`id`/`aid`/`cid`/`pid`…，雪花 ID 防精度丢失）；`createTime`/`updateTime` 是**绝对时间戳（秒）**，前端按浏览器时区展示
 
-错误码见后端 `common/enums/ResultCodeEnum`：`-10004` 未登录、`-10005` 用户名错误、`-10006` 密码错误、`-10007` 用户名已用、`-10008` 邮箱已用、`-10009` 无权限、`-10010` 资源不存在、`-10011` 业务错误、`-10012` 参数校验失败、`-10013` 系统错误。
+错误码见后端 `common/enums/ResultCodeEnum`：`-10004` 未登录、`-10005` 用户名错误、`-10006` 密码错误、`-10007` 用户名已用、`-10008` 邮箱已用、`-10009` 无权限、`-10010` 资源不存在、`-10011` 业务错误、`-10012` 参数校验失败、`-10013` 系统错误、`-10014` 登录失败（用户名或密码错误，不区分「用户不存在」以防枚举）、`-10015` 评论超过可编辑时间或已有回复。
 
 ## 2) 路由前缀
 
@@ -44,10 +44,11 @@
 
 | 参数 | 类型 | 必填 | 规则 |
 |---|---|---|---|
-| username | string | 是 | 1~16 位；`patterns.username` |
-| password | string | 是 | 6~64 位；至少含字母 |
+| username | string | 是 | 用户名或邮箱，1~64 位，不校验格式（`globalRules.account`） |
+| password | string | 是 | 非空、≤64 位（登录不校验密码格式） |
 
 返回：`{ id, username, avatarUrl, createTime, email }`
+登录失败统一返回 `-10014`（不区分用户不存在 / 密码错误）。`username` 含 `@` 按邮箱匹配，否则按用户名匹配。
 
 ### 3.2 User（`/user`）
 
@@ -73,13 +74,14 @@
 | `/user/deletePackage` | POST | 删分组，body `{ id, pid }` | `manageContent.vue` |
 
 分页查询（`getFollowings` / `getFollowers`）body：`{ pageSize, currentPage, filter: { keyword? } }`
-返回：`{ list: [{ id, username, avatarUrl, createTime, email, mutual }], total }`
+返回：`{ list: [{ id, username, avatarUrl, createTime, followed, mutual }], total }`
+> 不返回他人 `email`。`followed` = 当前用户是否关注了 ta；`mutual` = 互相关注。
 
 `updateUserInfo` body（按场景传字段）：`username` / `email` + `verificationCode` / `password`。
 > ⚠ 安全整改（见 `项目完成度评估与计划书.md` A7/A8）：此接口后续将拆为
 > `POST /user/updatePassword`（登录 + 校验当前密码）与 `POST /user/resetPassword`（匿名 + 邮箱验证码）。
 
-`register` body：`{ email, username, password, verificationCode }`（正则同登录 + 邮箱格式）。
+`register` body：`{ email, username, password, verificationCode }`。username 1~20 位、不含 `@`；password 8~64 位、至少含字母；改用户名 / 改密码同此规则。
 
 ### 3.3 Article（`/article`）
 
@@ -108,18 +110,25 @@
 |---|---|---|---|
 | `/comment/getCommentInbox` | POST | 当前用户评论收件箱分页 | `message/index.vue` |
 | `/comment/getComments` | POST | 文章评论 / 某根评论的回复分页 | `article/index.vue`、`singleComment.vue` |
-| `/comment/addComment` | POST | 发布评论或回复 | `addComment.vue` |
-| `/comment/editComment` | POST | 编辑评论，body 含 `aid`、`cid` | `addComment.vue` |
+| `/comment/addComment` | POST | 发布评论或回复 → `{ cid }` | `addComment.vue` |
+| `/comment/editComment` | POST | 编辑评论，body 含 `aid`、`cid`；**仅本人、发布 5 分钟内、且无回复**可编辑，否则 `-10015` | `addComment.vue` |
 | `/comment/deleteComment` | POST | 删除评论，body `{ aid, cid }` | `singleComment.vue` |
 
 `getCommentInbox` body：`{ pageSize, currentPage }`（作者身份取自登录态）
-`getComments` body：`{ aid, root?, pageSize, currentPage }`（有 `root` 时查该根评论的回复，否则查根评论）
-`addComment` body：`{ aid, authorId, useMD, content, parent?, root? }`
-返回项结构：`{ cid, aid, authorId, title, createTime, updateTime, useMD, content:{msg}, member:{id,username,avatarUrl}, parent, parentContent:{msg}, root, comments:{list,total} }`
+`getComments` body：`{ aid, root?, pageSize, currentPage }`
+> 无 `root`（列根评论）：每条根评论的 `comments` 内联返回**前 2 条子回复** + `total`（`PREVIEW_REPLIES`）。前端不再逐条挂载请求；`total > 已展示数` 时显示「展开 N 条回复」，点击才带 `root` 拉全量（分页）。
+> 有 `root`（列某根评论的回复）：返回该根下的全部子回复（分页），子项不再嵌套 `comments`。
+`addComment` body：`{ aid, authorId, useMD, content:{msg}, parent?, root? }`
+> 评论 Markdown 里插图也走 `POST /article/uploadImage`（登录用户通用图片上传），暂无独立的 `/comment/uploadImage`；因此评论图在 `file_asset` 里 `asset_type` 记为 `article_image`。待文件上传统一加固时再拆分（见 `项目完成度评估与计划书.md` 阶段 1 P0）。
+返回项的 `content.member`（`{id,username,avatarUrl}`）：仅「回复的回复」（`parent != root`）时出现，= 父评论作者，前端据此渲染「回复 @xxx：」。后端按 `parent_id` 现算（忽略父评论逻辑删除，删了也照常显示 @），无需前端上传。
+`editComment` body：`{ aid, cid, useMD, content:{msg} }`
+返回项结构：`{ cid, aid, authorId, title, createTime, updateTime, canEdit, useMD, content:{msg}, member:{id,username,avatarUrl}, parent, parentContent:{msg, deleted?}, root, comments:{list,total} }`
+> `parentContent.deleted = true`：被回复的父评论已被删除（前端显示「评论已删除」）。父评论为 null（顶级评论）时 `parentContent = {msg:""}`。
 > `updateTime` = 评论最后编辑时间（秒）；前端 `updateTime - createTime > 60` 时显示「(已编辑)」。
+> `canEdit` = 当前登录用户是否可编辑此评论（本人 + 发布 5 分钟内 + 无回复）。前端据此决定「编辑」菜单项是否出现，「删除」始终有。
 
-> ⚠ 已知契约问题：
-> 1. **未修**：前端 `addComment`/`editComment` 目前把 `content` 作为对象 `{msg, member}` 传输，后端 `CommentRequest.content` 为 `String` → 真实后端会反序列化失败。
+> 已修的契约问题：
+> 1. **已修（2026-08-29）**：`content` 请求体形状 —— 后端 `CommentRequest.content` 由 `String` 改为对象 `{msg}`（取 `content.msg` 作正文，多余字段如 `member` 忽略），与前端及响应形状对齐。
 > 2. **已修（2026-08-28）**：雪花 ID 精度 —— 后端 `JacksonConfiguration` 把超出 JS 安全范围（2^53）的 `Long` 序列化为**字符串**。因此所有 `id`/`aid`/`cid`/`pid` 等在响应里是字符串；`createTime`/`updateTime`/`total`/`viewCount` 等小数值仍是数字。请求侧发字符串或数字均可（后端 `parseId` 兼容）。
 
 ## 4) 与 mock 的对应规则
