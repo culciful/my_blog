@@ -28,10 +28,12 @@ CREATE TABLE `user_info` (
   `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
   `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间(UTC)',
   `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+  `deleted_token` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除版本号: 活跃=0, 删除=唯一值',
   PRIMARY KEY (`id`),
   KEY `idx_user_avatar_asset` (`avatar_asset_id`),
-  UNIQUE KEY `uk_user_email` (`email`, `is_deleted`),
-  UNIQUE KEY `uk_user_username` (`username`, `is_deleted`)
+  KEY `idx_user_active` (`is_deleted`, `deleted_token`),
+  UNIQUE KEY `uk_user_email_deleted_token` (`email`, `deleted_token`),
+  UNIQUE KEY `uk_user_username_deleted_token` (`username`, `deleted_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户基本信息表';
 
 CREATE TABLE `file_asset` (

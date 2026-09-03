@@ -1,134 +1,137 @@
-# vue3-ts-blog 接口文档（含传参与返回格式）
+# vue3-ts-blog API 文档（RPC 命名版）
 
-## 1. 统一响应约定
+> 依据前端 `src/model/*/constant.ts` 与后端 controller 整理。
+> 命名约定：`/<模块>/<动词短语>`，扁平路径不含 id；纯查询用 `GET`（参数走 query），其余一律 `POST`（参数走 body）。
 
-项目请求封装位于 `src/utils/request.ts`，前端统一按如下结构处理：
+## 1) 统一响应约定
+
+前端请求封装在 `src/utils/request.ts`，统一按以下结构处理：
 
 ```json
-{
-  "errorCode": 0,
-  "result": {}
-}
+{ "errorCode": 0, "result": {} }
 ```
 
 - `errorCode === 0` 视为成功
-- 文档中的“返回格式”默认表示 `result` 字段结构
-- 标记“未在前端消费”的接口，表示调用后只关心成功/失败
+- 文档中的“返回”均表示 `result` 字段结构
+- 标注“仅成功/失败”的接口，前端不消费 `result` 内容
+- **ID 字段是字符串**（`id`/`aid`/`cid`/`pid`…，雪花 ID 防精度丢失）；`createTime`/`updateTime` 是**绝对时间戳（秒）**，前端按浏览器时区展示
 
-## 2. User 模块
+错误码见后端 `common/enums/ResultCodeEnum`：`-10004` 未登录、`-10005` 用户名错误、`-10006` 密码错误、`-10007` 用户名已用、`-10008` 邮箱已用、`-10009` 无权限、`-10010` 资源不存在、`-10011` 业务错误、`-10012` 参数校验失败、`-10013` 系统错误。
 
-| 接口 | 方法 | 请求参数（Body） | 返回格式（result） | 主要调用位置 |
-|---|---|---|---|---|
-| `/user/login` | POST | `{ username: string, password: string }` | `{ id: number, username: string, avatarUrl: string, createTime: number }` | `src/pages/login/login.vue` |
-| `/user/logout` | POST | 无 | 未在前端消费（成功即可） | `src/components/customHeader/index.vue` |
-| `/user/register` | POST | `{ email: string, username: string, password: string }` | 未在前端消费（成功后跳转登录） | `src/pages/login/register.vue` |
-| `/user/getUserInfo` | POST | 无 | `{ id: number, username: string, avatarUrl: string, createTime: number, email: string }` | `src/App.vue`, `src/pages/user/userCenter.vue` |
-| `/user/stat` | POST | 无 | `{ articleCount: number, following: number, follower: number }` | `src/pages/user/userCenter.vue` |
-| `/user/followings` | POST | `{ pageSize: number, currentPage: number, filter: { keyword: string } }` | `{ list: UserFollowItem[], total: number }` | `src/pages/user/follow.vue` |
-| `/user/followers` | POST | `{ pageSize: number, currentPage: number, filter: { keyword: string } }` | `{ list: UserFollowItem[], total: number }` | `src/pages/user/follow.vue` |
-| `/user/updateUserInfo` | POST | 场景1改名：`{ username: string }`；场景2改邮箱：`{ email: string, verificationCode: string }`；场景3改密码：`{ password: string }` | 未在前端消费（成功后刷新信息/重新登录） | `src/pages/user/userCenter.vue`, `src/pages/login/forgetPassword.vue` |
-| `/user/sendEmailCode` | POST | `{ email: string }` | 未在前端消费（成功即可） | `src/pages/login/register.vue`, `src/pages/login/forgetPassword.vue`, `src/pages/user/userCenter.vue` |
-| `/user/checkPassword` | POST | 用户中心：`{ password: string }`；校验弹窗：`{ password: string, id: number }` | 未在前端消费（成功表示密码正确） | `src/pages/user/userCenter.vue`, `src/pages/user/components/checkPwdDialog.vue` |
-| `/user/checkEmailCode` | POST | `{ email: string, verificationCode: string }` | 未在前端消费（成功即可进入下一步） | `src/pages/login/forgetPassword.vue` |
-| `/user/checkEmailExist` | POST | `{ email: string }` | `{ isExisted: boolean }` | `src/pages/login/register.vue`, `src/pages/login/forgetPassword.vue` |
-| `/user/uploadAvatar` | POST | `multipart/form-data`：`file` | 未在前端消费（成功后刷新头像） | `src/pages/user/components/uploadAvatar.vue` |
-| `/user/checkHasFollow` | POST | `{ id: number }` | `{ data: boolean }` | `src/pages/user/manageContent.vue` |
-| `/user/switchFollow` | POST | `{ id: number, value: boolean }` | 未在前端消费（成功后前端本地切换状态） | `src/pages/user/manageContent.vue`, `src/pages/user/follow.vue` |
-| `/user/getPackages` | POST | `{ id: number }` | `{ list: { pid: number, pname: string }[] }` | `src/pages/article/addArticle.vue`, `src/pages/user/manageContent.vue` |
-| `/user/addPackage` | POST | `{ id: number, pname: string }` | `{ pid: number }` | `src/pages/article/addArticle.vue`, `src/pages/user/manageContent.vue` |
-| `/user/deletePackage` | POST | `{ id: number, pid: number }` | 未在前端消费（成功即可） | `src/pages/user/manageContent.vue` |
-| `/user/editPackage` | POST | `{ id: number, pid: number, pname: string }` | 未在前端消费（成功即可） | `src/pages/user/manageContent.vue` |
+## 2) 路由前缀
 
-`UserFollowItem` 示例结构（来自 mock）：
+- 通用与认证：`/api/**`（`/api/getConf`、`/api/auth/login`、`/api/auth/logout`）
+- 用户域：`/user/**`
+- 文章域：`/article/**`
+- 评论域：`/comment/**`
 
-```json
-{
-  "id": 1,
-  "username": "张三",
-  "avatarUrl": "/static/img/favicon.ico",
-  "createTime": 1704034129,
-  "email": "xx@xx.com",
-  "mutual": true
-}
-```
+需前端 RSA 加密后以 `text/plain` 传输的接口（`request.ts` 拦截器处理）：
+`/api/auth/login`、`/user/register`、`/user/updateUserInfo`、`/user/checkPassword`。
 
-## 3. Article 模块
+## 3) API 列表
 
-| 接口 | 方法 | 请求参数（Body） | 返回格式（result） | 主要调用位置 |
-|---|---|---|---|---|
-| `/article/getArticleList` | POST | `{ pageSize: number, currentPage: number, filter: { keyword?: string, id?: number, pid?: number, tag?: string } }` | `{ list: ArticleListItem[], total: number }` | `src/pages/article/components/list.vue` |
-| `/article/getArticleInfo` | POST | `{ aid: number \| string }` | `ArticleDetail` | `src/pages/article/index.vue`, `src/pages/article/addArticle.vue` |
-| `/article/addArticle` | POST | `{ id: number, title: string, content: string, createTime: string, pid: number, tags: string[] }` | `{ aid: number }`（前端也按 `res.result.id` 取值，后端建议同时返回 `id`） | `src/pages/article/addArticle.vue` |
-| `/article/editArticle` | POST | `{ id: number, title: string, content: string, createTime: string, pid: number, tags: string[] }` | `{ aid: number }`（同上建议兼容 `id`） | `src/pages/article/addArticle.vue` |
-| `/article/deleteArticle` | POST | `{ aid: number }` | 未在前端消费（成功即可） | `src/pages/article/components/list.vue` |
-| `/article/uploadImage` | POST | `multipart/form-data`：`file` | `{ url: string }` | `src/pages/article/addArticle.vue` |
-| `/article/getTags` | GET | 无 | `{ list: string[] }` | `src/pages/article/addArticle.vue` |
+### 3.1 Common / Auth
 
-`ArticleListItem` 示例结构：
+| 接口 | 方法 | 说明 | 主要调用 |
+|---|---|---|---|
+| `/api/getConf` | GET | 获取 RSA 公钥（登录/注册加密用） | `utils/encrypt.ts` |
+| `/api/auth/login` | POST（text/plain 加密） | 账号登录，写入 HttpOnly cookie | `login.vue` |
+| `/api/auth/logout` | POST | 注销登录态 | `customHeader/index.vue` |
 
-```json
-{
-  "aid": 123,
-  "member": { "username": "郎中", "id": "1231" },
-  "title": "2023年终总结",
-  "createTime": 1704034129,
-  "viewCount": 0,
-  "commentCount": 10,
-  "abstract": "..."
-}
-```
+`/api/getConf` 返回：`{ "data": "-----BEGIN PUBLIC KEY-----..." }`
 
-`ArticleDetail` 示例结构：
+`/api/auth/login` 参数（加密前的 JSON）：
 
-```json
-{
-  "aid": 123,
-  "member": { "id": "1231", "username": "郎中", "avatarUrl": "/static/img/favicon.ico" },
-  "title": "水平布局",
-  "createTime": 1704034129,
-  "viewCount": 0,
-  "commentCount": 10,
-  "package": { "pid": 0, "pname": "全部" },
-  "tags": ["css"],
-  "content": "markdown..."
-}
-```
+| 参数 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| username | string | 是 | 1~16 位；`patterns.username` |
+| password | string | 是 | 6~64 位；至少含字母 |
 
-## 4. Comment 模块
+返回：`{ id, username, avatarUrl, createTime, email }`
 
-| 接口 | 方法 | 请求参数（Body） | 返回格式（result） | 主要调用位置 |
-|---|---|---|---|---|
-| `/comment/getComments` | POST | 场景1按文章：`{ aid: number \| string, pageSize: number, currentPage: number }`；场景2按根评论：`{ root: number, pageSize: number, currentPage: number }`；场景3按用户：`{ id: number, pageSize: number, currentPage: number }` | `{ list: CommentItem[], total: number }` | `src/pages/article/index.vue`, `src/pages/article/components/singleComment.vue`, `src/pages/message/index.vue` |
-| `/comment/addComment` | POST | `{ id: number, aid: number\|string, authorId: number\|string, createTime: string, useMD: boolean, content: { msg: string, member: object }, parent?: number, root?: number }` | 未在前端消费（成功后使用本地 params 更新 UI） | `src/pages/article/components/addComment.vue` |
-| `/comment/editComment` | POST | 基于已有评论对象全量提交（至少包含 `cid/createTime/useMD/content.msg`） | 未在前端消费（成功后使用本地 params 更新 UI） | `src/pages/article/components/addComment.vue` |
-| `/comment/deleteComment` | POST | `{ cid: number }` | 未在前端消费（成功后前端删除列表项） | `src/pages/article/components/singleComment.vue` |
+### 3.2 User（`/user`）
 
-`CommentItem` 示例结构（简化）：
+| 接口 | 方法 | 说明 | 主要调用 |
+|---|---|---|---|
+| `/user/register` | POST（text/plain 加密） | 注册 | `register.vue` |
+| `/user/checkEmailExist` | POST | 检查邮箱是否已注册 → `{ isExisted }` | `register.vue`、`forgetPassword.vue` |
+| `/user/getUserInfo` | GET `?id=` | 指定用户公开资料 | `manageContent.vue` |
+| `/user/getMyProfile` | GET | 当前登录用户完整资料（含 email） | `App.vue`、`userCenter.vue` |
+| `/user/updateUserInfo` | POST（json 或 text/plain 加密） | 改用户名/邮箱/密码；未登录时走邮箱重置密码 | `userCenter.vue`、`forgetPassword.vue` |
+| `/user/checkPassword` | POST（json 或 text/plain 加密） | 校验当前用户密码 | `userCenter.vue`、`checkPwdDialog.vue` |
+| `/user/getStat` | GET | 文章数/关注/粉丝 → `{ articleCount, following, follower }` | `userCenter.vue` |
+| `/user/getFollowings` | POST | 分页查询关注列表 | `follow.vue` |
+| `/user/getFollowers` | POST | 分页查询粉丝列表 | `follow.vue` |
+| `/user/sendEmailCode` | POST | 发送邮箱验证码（`scene`: register/reset/update_email） | `register.vue`、`forgetPassword.vue`、`userCenter.vue` |
+| `/user/checkEmailCode` | POST | 校验邮箱验证码 | `forgetPassword.vue` |
+| `/user/uploadAvatar` | POST（form-data） | 上传头像（`file` 或 base64 `image`） | `uploadAvatar.vue` |
+| `/user/checkHasFollow` | GET `?id=` | 查询对目标用户的关注状态 → `{ data: boolean }` | `manageContent.vue` |
+| `/user/switchFollow` | POST | 关注/取关，body `{ id, value }` | `manageContent.vue`、`follow.vue` |
+| `/user/getPackages` | GET `?id=` | 用户的文章分组列表 → `{ list: [{ pid, pname }] }` | `addArticle.vue`、`manageContent.vue` |
+| `/user/addPackage` | POST | 新建分组，body `{ id, pname }` → `{ pid }` | `addArticle.vue`、`manageContent.vue` |
+| `/user/editPackage` | POST | 改分组名，body `{ id, pid, pname }` | `manageContent.vue` |
+| `/user/deletePackage` | POST | 删分组，body `{ id, pid }` | `manageContent.vue` |
 
-```json
-{
-  "cid": 123,
-  "aid": 123,
-  "authorId": 432,
-  "createTime": 1704034129,
-  "useMD": true,
-  "content": { "msg": "写得真好", "member": {} },
-  "member": { "id": 1, "username": "张三", "avatarUrl": "/static/img/favicon.ico" },
-  "comments": { "list": [], "total": 0 },
-  "parent": 123,
-  "root": 123
-}
-```
+分页查询（`getFollowings` / `getFollowers`）body：`{ pageSize, currentPage, filter: { keyword? } }`
+返回：`{ list: [{ id, username, avatarUrl, createTime, email, mutual }], total }`
 
-## 5. Api 模块
+`updateUserInfo` body（按场景传字段）：`username` / `email` + `verificationCode` / `password`。
+> ⚠ 安全整改（见 `项目完成度评估与计划书.md` A7/A8）：此接口后续将拆为
+> `POST /user/updatePassword`（登录 + 校验当前密码）与 `POST /user/resetPassword`（匿名 + 邮箱验证码）。
 
-| 接口 | 方法 | 请求参数 | 返回格式（result） | 主要调用位置 |
-|---|---|---|---|---|
-| `/api/getConf` | GET | 无 | `{ data: string }`（RSA 公钥） | `src/utils/encrypt.ts` |
+`register` body：`{ email, username, password, verificationCode }`（正则同登录 + 邮箱格式）。
 
-## 6. 备注（按项目现状）
+### 3.3 Article（`/article`）
 
-- 下面接口在 mock 中未给出样例返回：`logout/register/updateUserInfo/sendEmailCode/checkPassword/checkEmailCode/uploadAvatar/switchFollow/deletePackage/editPackage/deleteArticle/uploadImage/addComment/editComment/deleteComment`。  
-  前端当前都只依赖“成功/失败”，后端返回 `errorCode: 0` 即可满足现有逻辑。
-- `addArticle/editArticle` 返回字段建议统一为 `{ id: number }`（或同时返回 `aid` 与 `id`），因为前端有 `res.result.id` 的读取。
+| 接口 | 方法 | 说明 | 主要调用 |
+|---|---|---|---|
+| `/article/getArticleList` | POST | 分页检索文章 | `article/components/list.vue` |
+| `/article/getArticleInfo` | GET `?aid=` | 单篇详情（并浏览量 +1） | `article/index.vue`、`addArticle.vue` |
+| `/article/addArticle` | POST | 新建文章 → `{ id }` | `addArticle.vue` |
+| `/article/editArticle` | POST | 编辑文章，body 含 `aid` → `{ id }` | `addArticle.vue` |
+| `/article/deleteArticle` | POST | 删除文章，body `{ aid }` | `article/components/list.vue` |
+| `/article/uploadImage` | POST（form-data） | 上传正文图片 → `{ url, imgUrl }` | `addArticle.vue` |
+| `/article/getTags` | GET | 标签列表 → `{ list: string[] }` | `addArticle.vue` |
 
+`getArticleList` body：`{ pageSize, currentPage, filter: { keyword?, id?（作者）, pid?（分组）, tag? } }`
+返回：`{ list: [{ aid, id, member:{id,username,avatarUrl}, title, createTime, viewCount, commentCount, abstract }], total }`
+
+`getArticleInfo` 返回（在列表项基础上多）：`{ ...列表项, updateTime, content, pid, package:{pid,pname}, tags:string[], comments:{list,total} }`
+> `updateTime` = 文章最后编辑时间（秒）。浏览量自增不会改动它；仅 `editArticle` 会。
+> 前端判定「编辑过」：`updateTime - createTime > 60`。
+
+`addArticle` / `editArticle` body：`{ id（作者，忽略）, aid（仅 edit）, title, content, createTime, pid, tags: string[] }`
+
+### 3.4 Comment（`/comment`）
+
+| 接口 | 方法 | 说明 | 主要调用 |
+|---|---|---|---|
+| `/comment/getCommentInbox` | POST | 当前用户评论收件箱分页 | `message/index.vue` |
+| `/comment/getComments` | POST | 文章评论 / 某根评论的回复分页 | `article/index.vue`、`singleComment.vue` |
+| `/comment/addComment` | POST | 发布评论或回复 | `addComment.vue` |
+| `/comment/editComment` | POST | 编辑评论，body 含 `aid`、`cid` | `addComment.vue` |
+| `/comment/deleteComment` | POST | 删除评论，body `{ aid, cid }` | `singleComment.vue` |
+
+`getCommentInbox` body：`{ pageSize, currentPage }`（作者身份取自登录态）
+`getComments` body：`{ aid, root?, pageSize, currentPage }`（有 `root` 时查该根评论的回复，否则查根评论）
+`addComment` body：`{ aid, authorId, useMD, content, parent?, root? }`
+返回项结构：`{ cid, aid, authorId, title, createTime, updateTime, useMD, content:{msg}, member:{id,username,avatarUrl}, parent, parentContent:{msg}, root, comments:{list,total} }`
+> `updateTime` = 评论最后编辑时间（秒）；前端 `updateTime - createTime > 60` 时显示「(已编辑)」。
+
+> ⚠ 已知契约问题：
+> 1. **未修**：前端 `addComment`/`editComment` 目前把 `content` 作为对象 `{msg, member}` 传输，后端 `CommentRequest.content` 为 `String` → 真实后端会反序列化失败。
+> 2. **已修（2026-08-28）**：雪花 ID 精度 —— 后端 `JacksonConfiguration` 把超出 JS 安全范围（2^53）的 `Long` 序列化为**字符串**。因此所有 `id`/`aid`/`cid`/`pid` 等在响应里是字符串；`createTime`/`updateTime`/`total`/`viewCount` 等小数值仍是数字。请求侧发字符串或数字均可（后端 `parseId` 兼容）。
+
+## 4) 与 mock 的对应规则
+
+开发环境 mock 由 `src/utils/mockServer.ts` 处理：按 `mock/<模块>/<动词>/<method>.json` 读取。
+
+示例：
+
+- `GET /article/getArticleInfo?aid=123` → `src/mock/article/getArticleInfo/get.json`
+- `POST /user/editPackage` → `src/mock/user/editPackage/post.json`
+
+## 5) 建议
+
+- 新增/编辑文章统一返回 `{ id: number }`，前端跳转逻辑已兼容 `id/aid`。
+- 安全整改项（JWT 失效、登录限流、验证码加固、文件上传校验、A7/A8 改密拆分等）见 `项目完成度评估与计划书.md`。
