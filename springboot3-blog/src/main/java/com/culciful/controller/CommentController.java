@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -190,6 +190,7 @@ public class CommentController {
         m.put("authorId", comment.getAuthorId());
         m.put("title", blog == null ? "" : blog.getTitle());
         m.put("createTime", epoch(comment.getCreatedAt()));
+        m.put("updateTime", epoch(comment.getUpdatedAt()));
         m.put("useMD", Boolean.TRUE.equals(comment.getIsMarkdown()));
         m.put("content", Map.of("msg", text == null ? "" : text.getBody()));
         m.put("member", member(comment.getUserId()));
@@ -254,7 +255,7 @@ public class CommentController {
     }
 
     private long epoch(LocalDateTime time) {
-        return time == null ? 0L : time.toEpochSecond(ZoneOffset.UTC);
+        return time == null ? 0L : time.atZone(ZoneId.systemDefault()).toEpochSecond();
     }
 
     private String sha256(String body) {

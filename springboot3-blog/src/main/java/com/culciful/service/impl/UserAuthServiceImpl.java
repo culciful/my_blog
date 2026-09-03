@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -64,7 +64,7 @@ public class UserAuthServiceImpl implements UserAuthService {
         m.put("username", user.getUsername());
         m.put("avatarUrl", null);
         if (user.getCreatedAt() != null) {
-            m.put("createTime", user.getCreatedAt().toEpochSecond(ZoneOffset.UTC));
+            m.put("createTime", user.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond());
         } else {
             m.put("createTime", 0L);
         }

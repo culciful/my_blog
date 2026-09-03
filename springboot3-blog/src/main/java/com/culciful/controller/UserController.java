@@ -45,7 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Base64;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
@@ -412,7 +412,7 @@ public class UserController {
         m.put("id", user.getId());
         m.put("username", user.getUsername());
         m.put("avatarUrl", avatarUrl(user.getAvatarAssetId()));
-        m.put("createTime", user.getCreatedAt() != null ? user.getCreatedAt().toEpochSecond(ZoneOffset.UTC) : 0L);
+        m.put("createTime", user.getCreatedAt() != null ? user.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond() : 0L);
         return m;
     }
 

@@ -41,7 +41,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -111,8 +111,10 @@ public class ArticleController {
         if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted())) {
             return R.fail(ResultCodeEnum.NOT_FOUND);
         }
+        // 显式保留 updated_at，避免浏览量自增触发 ON UPDATE CURRENT_TIMESTAMP，
+        // 让 updated_at 只反映真正的内容编辑
         blogMapper.update(null, new LambdaUpdateWrapper<Blog>()
-                .setSql("view_count = view_count + 1")
+                .setSql("view_count = view_count + 1, updated_at = updated_at")
                 .eq(Blog::getId, aid));
         return R.ok(articleDetail(blog));
     }
@@ -230,6 +232,7 @@ public class ArticleController {
 
     private Map<String, Object> articleDetail(Blog blog) {
         Map<String, Object> m = articleListItem(blog);
+        m.put("updateTime", epoch(blog.getUpdatedAt()));
         TextBody text = textBodyMapper.selectById(blog.getContentTextId());
         m.put("content", text == null ? "" : text.getBody());
         m.put("pid", blog.getPackageId());
@@ -376,7 +379,8 @@ public class ArticleController {
     }
 
     private long epoch(LocalDateTime time) {
-        return time == null ? 0L : time.toEpochSecond(ZoneOffset.UTC);
+        // 存储用系统时区（LocalDateTime.now()），按同一时区换算成绝对时间戳，前端再按浏览器时区显示
+        return time == null ? 0L : time.atZone(ZoneId.systemDefault()).toEpochSecond();
     }
 
     private String overview(String content) {

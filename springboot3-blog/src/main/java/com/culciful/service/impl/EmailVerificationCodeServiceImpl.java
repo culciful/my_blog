@@ -32,10 +32,11 @@ public class EmailVerificationCodeServiceImpl implements EmailVerificationCodeSe
         boolean emailExists = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getEmail, email)
                 .eq(UserInfo::getIsDeleted, false)) > 0;
-        if (SCENE_REGISTER.equals(normalizedScene) && emailExists) {
+        // register / update_email：目标邮箱不能已被占用；reset：目标邮箱必须存在
+        if ((SCENE_REGISTER.equals(normalizedScene) || SCENE_UPDATE_EMAIL.equals(normalizedScene)) && emailExists) {
             return "EMAIL_USED";
         }
-        if ((SCENE_RESET_PASSWORD.equals(normalizedScene) || SCENE_UPDATE_EMAIL.equals(normalizedScene)) && !emailExists) {
+        if (SCENE_RESET_PASSWORD.equals(normalizedScene) && !emailExists) {
             return "EMAIL_NOT_FOUND";
         }
         EmailVerificationCode latest = emailVerificationCodeMapper.selectOne(new LambdaQueryWrapper<EmailVerificationCode>()
