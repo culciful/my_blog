@@ -101,6 +101,9 @@ h1, h2, h3, h4, h5, h6 {
 .a-c-primary {
     color: $--color-primary;
 }
+.a-c-primary:hover {
+    color: $--color-primary-light-3;
+}
 .a-c-h-primary:hover {
     color: $--color-primary;
 }

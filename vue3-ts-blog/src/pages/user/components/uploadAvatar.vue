@@ -139,9 +139,9 @@ function realTime(data) {  // 实时预览
 }
 
 const confirm = () => {
-    cropperRef.value.getCropData(data => {
+    cropperRef.value.getCropBlob(blob => {
         let formData = new FormData();
-        formData.append('file', data);
+        formData.append('file', blob, 'avatar.png');
         proxy.$request.post(Constant.url.uploadAvatar, formData, {
             headers: {'Content-Type': 'multipart/form-data'}
         }).then(res => {

@@ -11,7 +11,7 @@
 
 <script lang="ts" setup>
 import CustomHeader from '@/components/customHeader/index.vue';
-import ArticleList from '@/pages/article/components/list.vue';
+import ArticleList from '@/pages/article/components/articleList.vue';
 import {ref, onMounted} from 'vue';
 import {  useRoute } from 'vue-router';
 
@@ -32,8 +32,14 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+// a-full 是 height:100%，内容超过一屏时 <main> 的灰底只到一屏高，下面露出白色 body
+// 改成 min-height，让灰底随内容撑满
+main {
+    height: auto;
+    min-height: 100%;
+}
 .main-container {
-    margin: 10px auto;
+    margin: 24px auto;
     padding: 8px 24px 16px;
     max-width: 1000px;
     background: $--color-white;

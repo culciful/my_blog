@@ -62,7 +62,8 @@ const getData = () => {
         }
     }).then(res => {
         list.value = res.result.list.map(item => {
-            item.isFollowing = isViewFollowing.value || item[Constant.mutual];
+            // followed = 我是否关注了 ta（后端按当前用户视角计算，关注页恒为 true）
+            item.isFollowing = item[Constant.followed];
             return item;
         });
         total.value = res.result.total;
@@ -108,7 +109,7 @@ onMounted(() => {
 .main-container {
     max-width: 900px;
     min-width: 360px;
-    margin: 10px auto;
+    margin: 24px auto;
     background: $--bg-color;
 }
 .avatar {

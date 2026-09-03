@@ -74,7 +74,7 @@
 import {onMounted, getCurrentInstance, ref, reactive} from 'vue';
 import Constant, {defaultPackage, handleAvatar} from '@/model/user/constant';
 import {useUserStore} from '@/stores/user';
-import ArticleList from '@/pages/article/components/list.vue';
+import ArticleList from '@/pages/article/components/articleList.vue';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import i18n from '@/language/i18n';
 import {useRoute} from 'vue-router';
@@ -138,6 +138,7 @@ const addPackage = () => {
 
 const editPackage = (item) => {
     ElMessageBox.prompt(t('inputMessage.editPackageName'), t('label.tip'), {
+        inputValue: item[Constant.packageName],
         inputPattern: /^\S.{0,63}$/,
         inputErrorMessage: t('inputMessage.invalidInput')
     }).then(({ value }) => {

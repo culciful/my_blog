@@ -41,7 +41,7 @@
                     <el-input
                         :disabled="isQuerying"
                         v-model="userForm.username"
-                        maxlength="64"
+                        maxlength="20"
                         minlength="1" />
                 </el-form-item>
             </template>
@@ -191,7 +191,7 @@ const validatePass2 = (rule: any, value: any, callback: any) => {
 };
 const rules = reactive<FormRules<UserForm>>({
     username: [...globalRules.username, { validator: validateUsername, trigger: 'blur' }],
-    password: globalRules.password,
+    password: globalRules.currentPassword,
     newPassword: globalRules.password,
     confirmNewPwd: [{ validator: validatePass2, trigger: 'blur' }],
     email: [...globalRules.email, { validator: validateEmail, trigger: 'blur' }],
@@ -336,7 +336,7 @@ body {
 <style scoped lang="scss">
 .main-container {
     max-width: 900px;
-    margin: 10px auto;
+    margin: 24px auto;
     background: $--bg-color;
 }
 

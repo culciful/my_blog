@@ -28,6 +28,8 @@ const constant = {
     articleId: 'aid',
     createTime: 'createTime',
     updateTime: 'updateTime',
+    canEdit: 'canEdit',
+    deleted: 'deleted',
     commentCount: 'commentCount',
     content: 'content',
     commentList: 'comments',

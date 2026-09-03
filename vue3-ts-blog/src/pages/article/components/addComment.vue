@@ -10,7 +10,9 @@
     />
     <v-md-editor v-show="useMD"
                  height="400px"
-                 left-toolbar="undo redo clear | h bold italic strikethrough quote | ul ol table hr | link image code"
+                 left-toolbar="undo redo clear | bold italic strikethrough | quote code | ul ol table | link image"
+                 :disabled-menus="[]"
+                 @upload-image="handleUploadImage"
                  v-model="newComment">
     </v-md-editor>
     <div class="a-mt-xs operation-panel">
@@ -27,6 +29,7 @@
 import {getCurrentInstance, ref, watch} from 'vue';
 import {useUserStore} from '@/stores/user';
 import Constant from '@/model/comment/constant';
+import ArticleConstant from '@/model/article/constant';
 import i18n from '@/language/i18n';
 import {ElMessage} from 'element-plus';
 import {deepCopy} from '@/utils/utils';
@@ -77,6 +80,17 @@ watch(() => props.show, (val) => {
     }
 });
 
+function handleUploadImage(event, insertImage, files) {
+    if (!files || !files[0]) return;
+    const formData = new FormData();
+    formData.append('file', files[0]);
+    proxy.$request.post(ArticleConstant.url.uploadImage, formData, {
+        headers: {'Content-Type': 'multipart/form-data'}
+    }).then(res => {
+        insertImage({ url: res.result.url, desc: '' });
+    });
+}
+
 const publish = () => {
     newComment.value = newComment.value.trim();
     if(newComment.value.length === 0) {
@@ -103,9 +117,14 @@ const publish = () => {
                 params[Constant.content][Constant.member] = props.parentComment[Constant.member];
             }
         }
-        proxy.$request.post(Constant.url.addComment, params).then(() => {
+        proxy.$request.post(Constant.url.addComment, params).then((res) => {
+            // 用后端返回的真实 cid，避免用本地时间戳当 id 导致后续编辑/删除报「资源不存在」
+            params[Constant.commentId] = res?.result?.[Constant.commentId] ?? params[Constant.createTime];
             ElMessage.success(t('infoMessage.publishSuccess'));
             emit('finish', params);
+            // 发布后重置编辑区，并切回非 markdown 模式
+            newComment.value = '';
+            useMD.value = false;
         });
     } else {
         if (!props.editComment) return;

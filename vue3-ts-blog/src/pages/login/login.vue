@@ -75,8 +75,8 @@ const loginForm = reactive<LoginForm>({
 let isQuerying = ref(false);
 
 const rules = reactive<FormRules<LoginForm>>({
-    username: globalRules.username,
-    password: globalRules.password
+    username: globalRules.account,
+    password: globalRules.currentPassword
 });
 
 const onSubmit =  (formEl: FormInstance | undefined) => {

@@ -3,7 +3,7 @@
     <img class="avatar" :src="handleAvatar(comment[Constant.member][Constant.avatarUrl])" alt="">
     <div class="content-container">
         <div class="root a-pos-r">
-            <p class="username a-c-p a-c-h-primary" @click="viewUser(router, comment[Constant.member])">{{comment[Constant.member][Constant.username]}}</p>
+            <p class="username a-c-p a-c-h-lighter" @click="viewUser(router, comment[Constant.member])">{{comment[Constant.member][Constant.username]}}</p>
             <p v-if="!comment[Constant.useMD]">
                 {{comment[Constant.content][Constant.msg]}}
             </p>
@@ -27,7 +27,7 @@
                 <svg-icon name="more" size="16"></svg-icon>
                 <template #dropdown>
                     <el-dropdown-menu >
-                        <el-dropdown-item v-for="(value, key) in operateOptions" :key="key" @click="()=>{value(comment[Constant.commentId], comment)}">
+                        <el-dropdown-item v-for="(value, key) in optionsFor(comment)" :key="key" @click="()=>{value(comment[Constant.commentId], comment)}">
                             {{$t('label.'+key)}}
                         </el-dropdown-item>
                     </el-dropdown-menu>
@@ -40,15 +40,13 @@
             <img class="avatar" :src="handleAvatar(child[Constant.member][Constant.avatarUrl])" alt="">
             <div class="root a-pos-r">
                 <p class="username">
-                    <span class="a-c-p a-c-h-primary" @click="viewUser(router, child[Constant.member])">
+                    <span class="a-c-p a-c-h-lighter" @click="viewUser(router, child[Constant.member])">
                         {{child[Constant.member][Constant.username]}}
                     </span>
-                    <span class="a-ml-sm">
-                        <template v-if="isReply(child)">{{$t('label.replyTo')}} </template>
-                        <span v-if="child[Constant.content][Constant.member]" class="a-c-primary a-c-p">
-                            @{{child[Constant.content][Constant.member][Constant.username]}}
-                        </span>
-                        <template v-if="isReply(child)">：</template>
+                    <span class="a-ml-sm" v-if="child[Constant.content][Constant.member]">
+                        {{$t('label.replyTo')}}
+                        <span class="a-c-primary a-c-p">@{{child[Constant.content][Constant.member][Constant.username]}}</span>
+                        ：
                     </span>
                 </p>
                 <p v-if="!child[Constant.useMD]">
@@ -74,7 +72,7 @@
                     <svg-icon name="more" size="16"></svg-icon>
                     <template #dropdown>
                         <el-dropdown-menu>
-                            <el-dropdown-item v-for="(value, key) in operateOptions" :key="key" @click="($event)=>{value(child[Constant.commentId], child)}">
+                            <el-dropdown-item v-for="(value, key) in optionsFor(child)" :key="key" @click="($event)=>{value(child[Constant.commentId], child)}">
                                 {{$t('label.'+key)}}
                             </el-dropdown-item>
                         </el-dropdown-menu>
@@ -82,7 +80,14 @@
                 </el-dropdown>
             </div>
         </div>
+        <div v-if="!expanded && childTotal > childCommentList.length"
+             class="expand-replies">
+            <el-button link @click="expandChildren">
+                {{$t('label.expandReplies', { count: childTotal - childCommentList.length })}}
+            </el-button>
+        </div>
         <el-pagination
+            v-if="expanded"
             v-model:current-page="currentPage"
             hide-on-single-page
             layout="total, prev, pager, next"
@@ -146,6 +151,13 @@ const pageSize = 10;
 const childTotal = ref(0);
 const currentPage = ref(1);
 const childCommentList = ref([]);
+const expanded = ref(false);
+// 「展开 N 条回复」：拉全量（分页），此后子回复走完整列表
+const expandChildren = () => {
+    expanded.value = true;
+    currentPage.value = 1;
+    getChildComment();
+};
 const getChildComment = () => {
     proxy.$request.post(Constant.url.commentsByArticleSearch, {
         [Constant.articleId]: props.comment[Constant.articleId],
@@ -189,15 +201,17 @@ const deleteHandler = (id, row) => {
                 emit('delete', id);
             } else {
                 const index = childCommentList.value.findIndex(item => item[Constant.commentId] === id);
-                childCommentList.value.splice(index, 1);
+                if (index > -1) childCommentList.value.splice(index, 1);
+                childTotal.value = Math.max(0, childTotal.value - 1);
             }
         });
     }).catch(() => {});
 };
-const operateOptions = {
-    edit: editHandler,
-    delete: deleteHandler
-};
+// 仅当后端标记 canEdit（本人 + 发布5分钟内 + 无回复）才给「编辑」，「删除」始终有
+const optionsFor = (c) =>
+    c?.[Constant.canEdit]
+        ? { edit: editHandler, delete: deleteHandler }
+        : { delete: deleteHandler };
 const reply = (comment) => {
     if(showAddComment.value === true) {
         showAddComment.value = false;
@@ -212,26 +226,27 @@ const finishComment = (params) => {
     if(mode.value === 'edit') {
         newComment[Constant.useMD] = params[Constant.useMD];
         newComment[Constant.content][Constant.msg] = params[Constant.content][Constant.msg];
+        newComment[Constant.updateTime] = Math.floor(Date.now() / 1000);
     } else {
-        params[Constant.commentId] = params[Constant.createTime];
+        params[Constant.commentId] = params[Constant.commentId] || params[Constant.createTime];
+        params[Constant.canEdit] = true;   // 刚发的评论：本人、窗口内、无回复
         params[Constant.member] = {
             [Constant.userId]: userStore.id,
             [Constant.avatarUrl]: userStore.avatarUrl,
             [Constant.username]: userStore.username
         };
         childCommentList.value.push(params);
+        childTotal.value++;
     }
-};
-const isReply = (comment) => {
-    return comment[Constant.parent] && comment[Constant.parent] !== comment[Constant.root];
 };
 // 编辑时间比发布时间晚 60s 以上，视为「编辑过」
 const isEdited = (comment) =>
     Number(comment?.[Constant.updateTime]) - Number(comment?.[Constant.createTime]) > 60;
 
 onMounted(() => {
-    childTotal.value = props.comment[Constant.commentList]?.total;
-    childCommentList.value = props.comment[Constant.commentList]?.list;
+    // 前 2 条子回复由父级 getComments 内联返回，不在挂载时再发请求；更多走「展开」
+    childTotal.value = props.comment[Constant.commentList]?.total || 0;
+    childCommentList.value = [...(props.comment[Constant.commentList]?.list || [])];
 });
 </script>
 
@@ -265,7 +280,7 @@ onMounted(() => {
                 color: $--color-primary;
             }
             &.edited-mark {
-                margin-left: 6px;
+                margin-left: -12px;
                 color: $--text-color-secondary;
             }
         }
@@ -289,6 +304,10 @@ onMounted(() => {
     position: absolute;
     right: 0;
     top: 0;
+}
+
+.expand-replies {
+    margin: 4px 0 4px 42px;
 }
 
 :deep(.vuepress-markdown-body:not(.custom)) {

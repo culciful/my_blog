@@ -102,7 +102,7 @@ const rules = reactive<FormRules<ArticleForm>>({
         { pattern: /^\S.{0,63}$/, message: t('inputMessage.titleFormat'), trigger: 'blur' }
     ],
     package: globalRules.required,
-    tags: [...globalRules.required, { validator: validateTags, trigger: 'blur' }],
+    tags: [{ validator: validateTags, trigger: 'blur' }],
     content: globalRules.required
 });
 const validateContent = () => {

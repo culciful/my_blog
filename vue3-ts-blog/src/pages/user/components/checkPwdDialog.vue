@@ -55,7 +55,7 @@ const checkForm = reactive<CheckPwdForm>({
     password: '',
 });
 const rules = reactive<FormRules<CheckPwdForm>>({
-    password: globalRules.password,
+    password: globalRules.currentPassword,
 });
 let isQuerying = ref(false);
 

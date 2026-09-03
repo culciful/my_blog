@@ -28,7 +28,7 @@
             <el-form-item prop="username">
                 <el-input v-model="registerForm.username"
                           :placeholder="$t('label.username')"
-                          maxlength="16"
+                          maxlength="20"
                           minlength="1" />
             </el-form-item>
             <el-form-item prop="password">

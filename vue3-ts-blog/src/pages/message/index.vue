@@ -26,8 +26,9 @@
                             :model-value="item[Constant.content][Constant.msg]"
                             mode="preview">
                         </v-md-editor>
-                        <div class="source-reply ellipsis">
-                            {{item[Constant.parent]?item[Constant.parentContent][Constant.msg]:userStore.username+'：'+item[Constant.title]}}
+                        <div class="source-reply ellipsis a-c-p"
+                             @click="router.push('/article/' + item[Constant.articleId])">
+                            {{sourceText(item)}}
                         </div>
                         <div class="inline-container">
                             <span>{{transferTimestamp(item[Constant.createTime])}}</span>
@@ -65,16 +66,16 @@
 <script lang="ts" setup name="MessageIndex">
 import {getCurrentInstance, onMounted, ref} from 'vue';
 import CustomHeader from '@/components/customHeader/index.vue';
-import {useUserStore} from '@/stores/user';
 import Constant from '@/model/comment/constant';
 import {viewUser, handleAvatar} from '@/model/user/constant';
 import {useRouter} from 'vue-router';
 import {transferTimestamp} from '@/utils/utils';
+import i18n from '@/language/i18n';
 import AddComment from '@/pages/article/components/addComment.vue';
 
 const {proxy} = getCurrentInstance();
-const userStore = useUserStore();
 const router = useRouter();
+const { t } = i18n.global as any;
 
 const commentList = ref([]);
 const total = ref(0);
@@ -100,6 +101,14 @@ const getByUserId = () => {
     });
 };
 
+// 来源行文案：回复某评论 → 那条评论内容（已删则「评论已删除」）；评论博文 → 文章标题
+const sourceText = (item) => {
+    if (!item[Constant.parent]) return item[Constant.title];
+    const pc = item[Constant.parentContent] || {};
+    if (pc[Constant.deleted]) return t('label.commentDeleted');
+    return pc[Constant.msg] || item[Constant.title];
+};
+
 const replyToCommentId = ref(0);
 const reply = (comment) => {
     replyToCommentId.value = comment[Constant.commentId];
@@ -110,9 +119,14 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+// 见 index.vue：内容超一屏时灰底随内容撑满
+main {
+    height: auto;
+    min-height: 100%;
+}
 .main-container {
     max-width: 900px;
-    margin: 10px auto;
+    margin: 24px auto;
     background: $--bg-color;
 }
 .comment-container {
@@ -139,6 +153,9 @@ onMounted(() => {
     line-height: 16px;
     color: $--text-color-secondary;
     font-size: $--font-size-extra-small;
+    &:hover {
+        color: $--color-primary;
+    }
 }
 :deep(.vuepress-markdown-body:not(.custom)) {
     padding: 0;

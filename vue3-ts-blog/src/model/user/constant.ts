@@ -66,6 +66,7 @@ const constant = {
     following: 'following',
     follower: 'follower',
     mutual: 'mutual',
+    followed: 'followed',
     isExisted: 'isExisted'
 };
 

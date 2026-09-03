@@ -16,6 +16,16 @@
                             <svg-icon name="view" size="16"></svg-icon>
                             {{article[ArticleConstant.viewCount]}}
                         </span>
+                        <el-dropdown v-if="isAuthor" placement="bottom-end" trigger="click" class="article-more">
+                            <svg-icon name="more" size="16"></svg-icon>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item v-for="(fn, key) in articleOptions" :key="key" @click="fn">
+                                        {{$t('label.'+key)}}
+                                    </el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
                     </div>
                 </div>
                 <v-md-editor
@@ -84,6 +94,7 @@ import SingleComment from './components/singleComment.vue';
 import AddComment from './components/addComment.vue';
 import {computed, getCurrentInstance, nextTick, onMounted, reactive, ref} from 'vue';
 import type {Ref} from 'vue';
+import {ElMessage, ElMessageBox} from 'element-plus';
 import ArticleConstant from '@/model/article/constant';
 import CommentConstant from '@/model/comment/constant';
 import {setReactiveData, transferTimestamp} from '@/utils/utils';
@@ -114,6 +125,9 @@ let article = reactive({
 // 编辑时间比发布时间晚 60s 以上，视为「编辑过」
 const isEdited = computed(() =>
     Number(article[ArticleConstant.updateTime]) - Number(article[ArticleConstant.createTime]) > 60
+);
+const isAuthor = computed(() =>
+    userStore.isLoggedIn && String(article[ArticleConstant.author]?.[ArticleConstant.userId]) === String(userStore.id)
 );
 const computedPackage = computed(() => {
     if(article[ArticleConstant.package] && article[ArticleConstant.package][ArticleConstant.packageId] > 0) {
@@ -153,7 +167,8 @@ const handleCurrentChange = (val: number) => {
 
 const userStore = useUserStore();
 const finishComment = (comment) => {
-    comment[CommentConstant.commentId] = comment[CommentConstant.createTime];
+    comment[CommentConstant.commentId] = comment[CommentConstant.commentId] || comment[CommentConstant.createTime];
+    comment[CommentConstant.canEdit] = true;   // 刚发的评论：本人、窗口内、无回复
     comment[CommentConstant.member] = {
         [CommentConstant.userId]: userStore.id,
         [CommentConstant.avatarUrl]: userStore.avatarUrl,
@@ -166,6 +181,19 @@ const deleteComment = (commentId) => {
     comments.value.splice(index, 1);
 };
 const router = useRouter();
+
+const editArticle = () => router.push('/edit/' + props.articleId);
+const deleteArticle = () => {
+    ElMessageBox.confirm(t('infoMessage.confirmDeleteArticle'), t('label.tip')).then(() => {
+        proxy.$request.post(ArticleConstant.url.delete, {
+            [ArticleConstant.articleId]: props.articleId
+        }).then(() => {
+            ElMessage.success(t('infoMessage.deleteSuccess'));
+            router.push('/');
+        });
+    }).catch(() => {});
+};
+const articleOptions = { edit: editArticle, delete: deleteArticle };
 
 const gotoPackage = () => {
     const data = Object.assign(article[ArticleConstant.author], article[ArticleConstant.package]);
@@ -248,9 +276,14 @@ onMounted(() => {
 
         .edited-mark {
             color: $--text-color-secondary;
-            font-size: 0.9em;
         }
-        
+        .article-more {
+            cursor: pointer;
+            color: $--text-color-secondary;
+            outline: none;
+            &:hover { color: $--color-primary; }
+        }
+
         .comment {
             padding: 2rem 0;
             border-top: $--border;

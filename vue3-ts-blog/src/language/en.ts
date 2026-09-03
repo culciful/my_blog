@@ -49,6 +49,8 @@ export default {
         replyToMe: 'Reply to me',
         replyToMyComment: 'replied to my comment',
         replyToMyBlog: 'Replied to my blog',
+        commentDeleted: 'Comment deleted',
+        expandReplies: 'Show {count} more replies',
         title: 'title',
         mainBody: 'content',
         uploadAvatar: 'upload avatar',
@@ -70,8 +72,8 @@ export default {
         inputNewPassword: 'please enter new password',
         confirmNewPassword: 'please confirm new password',
         inputEmail: 'please enter email',
-        usernameFormat: 'Username consists of 1 to 64 characters',
-        passwordFormat: 'Password consists of 6 to 64 characters and must contain letters',
+        usernameFormat: 'Username must be 1-20 characters and cannot contain @',
+        passwordFormat: 'Password must be 8-64 characters and contain at least one letter',
         emailFormat: 'email format error',
         inputComment: 'Enter a comment...',
         invalidInput: 'invalid input',
@@ -120,6 +122,8 @@ export default {
         '-10010': 'Resource not found',
         '-10011': 'Business operation failed',
         '-10012': 'Parameter validation failed',
-        '-10013': 'Unknown system error'
+        '-10013': 'Unknown system error',
+        '-10014': 'Invalid username or password',
+        '-10015': 'This comment can no longer be edited (time window passed or it has replies)'
     }
 };

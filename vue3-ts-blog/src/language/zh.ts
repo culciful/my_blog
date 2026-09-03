@@ -49,6 +49,8 @@ export default {
         replyToMe: '回复我的',
         replyToMyComment: '回复了我的评论',
         replyToMyBlog: '回复了我的博文',
+        commentDeleted: '评论已删除',
+        expandReplies: '展开 {count} 条回复',
         title: '标题',
         mainBody: '正文',
         uploadAvatar: '上传头像',
@@ -70,8 +72,8 @@ export default {
         inputNewPassword: '请输入新密码',
         confirmNewPassword: '请再次输入新密码',
         inputEmail: '请输入邮箱',
-        usernameFormat: '用户名由1到64位字符组成',
-        passwordFormat: '密码由6到64位字符组成，且必须包含字母',
+        usernameFormat: '用户名由1到20位字符组成，且不能包含 @',
+        passwordFormat: '密码由8到64位字符组成，且必须包含字母',
         emailFormat: '邮箱格式错误',
         inputComment: '输入评论...',
         invalidInput: '输入不能为空',
@@ -120,6 +122,8 @@ export default {
         '-10010': '资源不存在',
         '-10011': '业务处理失败',
         '-10012': '参数格式校验失败',
-        '-10013': '系统未知异常'
+        '-10013': '系统未知异常',
+        '-10014': '用户名或密码错误',
+        '-10015': '评论超过可编辑时间或已有回复，无法修改'
     }
 };
