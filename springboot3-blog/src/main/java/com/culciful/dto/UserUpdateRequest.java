@@ -5,8 +5,9 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record UserUpdateRequest(
-        @Size(min = 1, max = 16)
-        @Pattern(regexp = "^[a-zA-Z0-9\\u4E00-\\u9FA5~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-][a-zA-Z0-9\\u4E00-\\u9FA5 ~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{0,15}$")
+        @Size(min = 1, max = 20)
+        // 禁止 @：避免用户名与他人邮箱字面相同造成登录歧义
+        @Pattern(regexp = "^[a-zA-Z0-9\\u4E00-\\u9FA5~!#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-][a-zA-Z0-9\\u4E00-\\u9FA5 ~!#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{0,19}$")
         String username,
 
         @Email
@@ -16,7 +17,7 @@ public record UserUpdateRequest(
         @Size(max = 16)
         String verificationCode,
 
-        @Size(min = 6, max = 64)
-        @Pattern(regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{6,64}$")
+        @Size(min = 8, max = 64)
+        @Pattern(regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{8,64}$")
         String password
 ) {}

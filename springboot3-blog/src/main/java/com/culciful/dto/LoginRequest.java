@@ -1,26 +1,19 @@
 package com.culciful.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Plain JSON login (HTTPS in prod). RSA-encrypted login can be added later on another path.
+ * 登录：username 字段接受用户名或邮箱，不做严格格式校验（校验交给认证逻辑）。
+ * 明文 JSON（生产走 HTTPS），也支持前端 RSA 加密后以 text/plain 传输。
  */
 public record LoginRequest(
         @NotBlank(message = "username is required")
-        @Size(min = 1, max = 16, message = "username length must be between 1 and 16")
-        @Pattern(
-                regexp = "^[a-zA-Z0-9\\u4E00-\\u9FA5~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-][a-zA-Z0-9\\u4E00-\\u9FA5 ~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{0,15}$",
-                message = "username format is invalid"
-        )
+        @Size(min = 1, max = 64, message = "username length must be between 1 and 64")
         String username,
 
+        // 登录不校验密码格式（校验交给认证逻辑），只限最大长度防超大 payload
         @NotBlank(message = "password is required")
-        @Size(min = 6, max = 64, message = "password length must be between 6 and 64")
-        @Pattern(
-                regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{6,64}$",
-                message = "password format is invalid"
-        )
+        @Size(max = 64, message = "password too long")
         String password
 ) {}

@@ -43,6 +43,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CommentController {
 
+    /** 评论发布后允许编辑的时间窗（分钟）；超过或已有回复则锁定 */
+    private static final int EDIT_WINDOW_MINUTES = 5;
+
+    /** 列根评论时，每条内联返回的子回复条数（更多走「展开」） */
+    private static final int PREVIEW_REPLIES = 2;
+
     private final BlogCommentMapper blogCommentMapper;
     private final BlogMapper blogMapper;
     private final TextBodyMapper textBodyMapper;
@@ -83,13 +89,17 @@ public class CommentController {
             wrapper.eq(BlogComment::getRootId, root);
         }
         Page<BlogComment> page = blogCommentMapper.selectPage(new Page<>(request.safeCurrentPage(), request.safePageSize()), wrapper);
-        List<Map<String, Object>> list = page.getRecords().stream().map(this::commentItem).toList();
+        // 列根评论时，每条带前 PREVIEW_REPLIES 条子回复；列某根评论的回复时不再嵌套
+        boolean listingRoots = (root == null);
+        List<Map<String, Object>> list = page.getRecords().stream()
+                .map(c -> commentItem(c, listingRoots))
+                .toList();
         return R.ok(Map.of("list", list, "total", page.getTotal()));
     }
 
     @PostMapping("/addComment")
     @Transactional
-    public R<Void> add(@RequestBody @Valid CommentRequest request) {
+    public R<Map<String, Object>> add(@RequestBody @Valid CommentRequest request) {
         Long selfId = currentUserId();
         Long aid = request.aid();
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
@@ -99,7 +109,7 @@ public class CommentController {
         if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted())) {
             return R.fail(ResultCodeEnum.NOT_FOUND);
         }
-        if (request == null || isBlank(request.content())) {
+        if (request == null || isBlank(request.msg())) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
         Long parentId = request.parent();
@@ -113,7 +123,7 @@ public class CommentController {
         comment.setBlogId(aid);
         comment.setAuthorId(blog.getUserId());
         comment.setIsMarkdown(Boolean.TRUE.equals(request.useMD()));
-        comment.setContentTextId(insertText(request.content()));
+        comment.setContentTextId(insertText(request.msg()));
         comment.setParentId(parentId);
         comment.setRootId(rootId);
         comment.setCreatedAt(LocalDateTime.now());
@@ -123,7 +133,7 @@ public class CommentController {
         blogMapper.update(null, new LambdaUpdateWrapper<Blog>()
                 .setSql("comment_count = comment_count + 1")
                 .eq(Blog::getId, aid));
-        return R.ok(null);
+        return R.ok(Map.of("cid", comment.getId()));
     }
 
     @PostMapping("/editComment")
@@ -141,13 +151,16 @@ public class CommentController {
         if (!comment.getUserId().equals(selfId)) {
             return R.fail(ResultCodeEnum.FORBIDDEN);
         }
-        if (request == null || isBlank(request.content())) {
+        if (request == null || isBlank(request.msg())) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
+        }
+        if (!withinEditWindow(comment) || hasReplies(comment.getId())) {
+            return R.fail(ResultCodeEnum.COMMENT_EDIT_LOCKED);
         }
         TextBody text = new TextBody();
         text.setId(comment.getContentTextId());
-        text.setBody(request.content());
-        text.setContentHash(sha256(request.content()));
+        text.setBody(request.msg());
+        text.setContentHash(sha256(request.msg()));
         textBodyMapper.updateById(text);
         comment.setIsMarkdown(Boolean.TRUE.equals(request.useMD()));
         comment.setUpdatedAt(LocalDateTime.now());
@@ -182,6 +195,10 @@ public class CommentController {
     }
 
     private Map<String, Object> commentItem(BlogComment comment) {
+        return commentItem(comment, false);
+    }
+
+    private Map<String, Object> commentItem(BlogComment comment, boolean withPreviewReplies) {
         Blog blog = blogMapper.selectById(comment.getBlogId());
         TextBody text = textBodyMapper.selectById(comment.getContentTextId());
         Map<String, Object> m = new LinkedHashMap<>();
@@ -192,7 +209,16 @@ public class CommentController {
         m.put("createTime", epoch(comment.getCreatedAt()));
         m.put("updateTime", epoch(comment.getUpdatedAt()));
         m.put("useMD", Boolean.TRUE.equals(comment.getIsMarkdown()));
-        m.put("content", Map.of("msg", text == null ? "" : text.getBody()));
+        // content.member = 「回复的回复」时被 @ 的人（即父评论作者）；父评论即使被删也照常显示 @
+        Map<String, Object> content = new LinkedHashMap<>();
+        content.put("msg", text == null ? "" : text.getBody());
+        if (comment.getParentId() != null && !comment.getParentId().equals(comment.getRootId())) {
+            Long parentAuthorId = blogCommentMapper.selectAuthorIdIgnoreDeleted(comment.getParentId());
+            if (parentAuthorId != null) {
+                content.put("member", member(parentAuthorId));
+            }
+        }
+        m.put("content", content);
         m.put("member", member(comment.getUserId()));
         m.put("parent", comment.getParentId());
         m.put("parentContent", parentContent(comment.getParentId()));
@@ -200,17 +226,42 @@ public class CommentController {
         long childCount = blogCommentMapper.selectCount(new LambdaQueryWrapper<BlogComment>()
                 .eq(BlogComment::getRootId, comment.getId())
                 .eq(BlogComment::getIsDeleted, false));
-        m.put("comments", Map.of("list", List.of(), "total", childCount));
+        List<Map<String, Object>> childPreview = List.of();
+        if (withPreviewReplies && childCount > 0) {
+            childPreview = blogCommentMapper.selectList(new LambdaQueryWrapper<BlogComment>()
+                            .eq(BlogComment::getRootId, comment.getId())
+                            .eq(BlogComment::getIsDeleted, false)
+                            .orderByAsc(BlogComment::getCreatedAt)
+                            .last("LIMIT " + PREVIEW_REPLIES))
+                    .stream().map(this::commentItem).toList();
+        }
+        m.put("comments", Map.of("list", childPreview, "total", childCount));
+        // 仅本人、在编辑时间窗内、且尚无回复时可编辑
+        Long selfId = currentUserId();
+        m.put("canEdit", selfId != null && selfId.equals(comment.getUserId())
+                && withinEditWindow(comment) && !hasReplies(comment.getId()));
         return m;
+    }
+
+    private boolean withinEditWindow(BlogComment comment) {
+        return comment.getCreatedAt() != null
+                && comment.getCreatedAt().plusMinutes(EDIT_WINDOW_MINUTES).isAfter(LocalDateTime.now());
+    }
+
+    private boolean hasReplies(Long commentId) {
+        return blogCommentMapper.selectCount(new LambdaQueryWrapper<BlogComment>()
+                .eq(BlogComment::getParentId, commentId)
+                .eq(BlogComment::getIsDeleted, false)) > 0;
     }
 
     private Map<String, Object> parentContent(Long parentId) {
         if (parentId == null) {
             return Map.of("msg", "");
         }
+        // 逻辑删除后 selectById 返回 null；用 deleted 标记，让前端显示「评论已删除」而不是空白
         BlogComment parent = blogCommentMapper.selectById(parentId);
-        if (parent == null || Boolean.TRUE.equals(parent.getIsDeleted())) {
-            return Map.of("msg", "");
+        if (parent == null) {
+            return Map.of("msg", "", "deleted", true);
         }
         TextBody text = textBodyMapper.selectById(parent.getContentTextId());
         return Map.of("msg", text == null ? "" : text.getBody());

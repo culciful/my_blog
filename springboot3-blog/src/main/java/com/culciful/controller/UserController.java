@@ -446,10 +446,15 @@ public class UserController {
                 continue;
             }
             Map<String, Object> m = toPublicProfile(user);
-            m.put("email", user.getEmail());
-            m.put("mutual", userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+            // 不对外暴露他人邮箱
+            boolean iFollowThem = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+                    .eq(UserFollow::getFollowerId, selfId)
+                    .eq(UserFollow::getFollowingId, userId)) > 0;
+            boolean theyFollowMe = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                     .eq(UserFollow::getFollowerId, userId)
-                    .eq(UserFollow::getFollowingId, selfId)) > 0);
+                    .eq(UserFollow::getFollowingId, selfId)) > 0;
+            m.put("followed", iFollowThem);
+            m.put("mutual", iFollowThem && theyFollowMe);
             list.add(m);
         }
         return Map.of("list", list, "total", page.getTotal());

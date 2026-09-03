@@ -17,17 +17,18 @@ public record RegisterRequest(
         String email,
 
         @NotBlank(message = "username is required")
-        @Size(min = 1, max = 16, message = "username length must be between 1 and 16")
+        @Size(min = 1, max = 20, message = "username length must be between 1 and 20")
         @Pattern(
-                regexp = "^[a-zA-Z0-9\\u4E00-\\u9FA5~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-][a-zA-Z0-9\\u4E00-\\u9FA5 ~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{0,15}$",
+                // 禁止 @：避免用户名与他人邮箱字面相同造成登录歧义
+                regexp = "^[a-zA-Z0-9\\u4E00-\\u9FA5~!#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-][a-zA-Z0-9\\u4E00-\\u9FA5 ~!#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{0,19}$",
                 message = "username format is invalid"
         )
         String username,
 
         @NotBlank(message = "password is required")
-        @Size(min = 6, max = 64, message = "password length must be between 6 and 64")
+        @Size(min = 8, max = 64, message = "password length must be between 8 and 64")
         @Pattern(
-                regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{6,64}$",
+                regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{8,64}$",
                 message = "password format is invalid"
         )
         String password,

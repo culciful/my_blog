@@ -31,7 +31,7 @@ public class UserAuthServiceImpl implements UserAuthService {
     public R<Map<String, Object>> login(LoginRequest request, HttpServletResponse response) {
         UserInfo user = authenticate(request.username(), request.password());
         if (user == null) {
-            return R.fail(ResultCodeEnum.PASSWORD_ERROR);
+            return R.fail(ResultCodeEnum.LOGIN_FAILED);
         }
         String jwt = jwtHelper.createToken(user.getId().longValue());
         jwtCookieService.addTokenCookie(response, jwt, jwtHelper.cookieMaxAgeSeconds());
@@ -43,11 +43,11 @@ public class UserAuthServiceImpl implements UserAuthService {
         if (usernameOrEmail == null || usernameOrEmail.isBlank() || rawPassword == null) {
             return null;
         }
+        // 含 @ 按邮箱匹配，否则按用户名匹配——避免「用户名」与「他人邮箱」字面相同导致的歧义
+        boolean asEmail = usernameOrEmail.contains("@");
         UserInfo user = userInfoMapper.selectOne(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getIsDeleted, false)
-                .and(w -> w.eq(UserInfo::getUsername, usernameOrEmail)
-                        .or()
-                        .eq(UserInfo::getEmail, usernameOrEmail))
+                .eq(asEmail ? UserInfo::getEmail : UserInfo::getUsername, usernameOrEmail)
                 .last("LIMIT 1"));
         if (user == null) {
             return null;

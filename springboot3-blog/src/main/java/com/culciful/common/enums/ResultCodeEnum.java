@@ -15,7 +15,11 @@ public enum ResultCodeEnum {
     NOT_FOUND(-10010, "resource not found"),
     BUSINESS_ERROR(-10011, "business error"),
     PARAM_ERROR(-10012, "param validation failed"),
-    SYSTEM_ERROR(-10013, "unknown system error");
+    SYSTEM_ERROR(-10013, "unknown system error"),
+    /** 登录失败：不区分「用户不存在」与「密码错误」，避免用户枚举 */
+    LOGIN_FAILED(-10014, "invalid username or password"),
+    /** 评论已超过可编辑时间窗，或已有回复 */
+    COMMENT_EDIT_LOCKED(-10015, "comment can no longer be edited");
 
     private final Integer errorCode;
     private final String message;
