@@ -39,14 +39,32 @@ export default defineConfig(({ mode }) => {
         plugins.push(mockServer());
     }
 
+    /**
+     * /user、/article 前缀下同时存在 SPA 路由（/user/userCenter…）和 API（/user/getMyProfile…）。
+     * 浏览器 HTML 导航（Accept: text/html，直接打开或刷新）交回 SPA 处理，
+     * 只有 XHR/fetch（Accept 非 text/html）才转发到后端。
+     */
+    const apiProxy = {
+        target: proxyTarget,
+        changeOrigin: true,
+        bypass(req: { headers: Record<string, string | undefined> }) {
+            const accept = req.headers.accept || '';
+            if (accept.includes('text/html')) {
+                return '/index.html';
+            }
+        }
+    };
+
     return {
         plugins,
         server: {
             proxy: {
-                '/api': { target: proxyTarget, changeOrigin: true },
-                '/user': { target: proxyTarget, changeOrigin: true },
-                '/article': { target: proxyTarget, changeOrigin: true },
-                '/comment': { target: proxyTarget, changeOrigin: true }
+                '/api': apiProxy,
+                '/user': apiProxy,
+                '/article': apiProxy,
+                '/comment': apiProxy,
+                // 后端本地上传目录（头像 / 正文图片）
+                '/uploads': { target: proxyTarget, changeOrigin: true }
             }
         },
         resolve: {

@@ -199,16 +199,13 @@ onMounted(() => {
         if (isVisitMode.value) {
             const rawPid = query[Constant.packageId] as string | string[] | undefined;
             const pidStr = Array.isArray(rawPid) ? rawPid[0] : rawPid;
-            if (pidStr != null && pidStr !== '') {
-                const n = parseInt(String(pidStr), 10);
-                if (!Number.isNaN(n) && n > 0) {
-                    selectedPackageId.value = n;
-                }
+            // 雪花 ID 保持字符串，勿转 Number
+            if (pidStr != null && pidStr !== '' && pidStr !== '0') {
+                selectedPackageId.value = pidStr;
             }
             const raw = query[Constant.userId] as string | string[] | undefined;
-            const idStr = Array.isArray(raw) ? raw[0] : raw;
-            userInfo[Constant.userId] =
-                idStr != null && /^\d+$/.test(String(idStr)) ? Number(idStr) : idStr;
+            // 雪花 ID 超出 JS Number 安全范围，保持字符串，勿转 Number
+            userInfo[Constant.userId] = (Array.isArray(raw) ? raw[0] : raw) ?? '';
             try {
                 const res: { result: Record<string, unknown> } = await proxy.$request.get(
                     Constant.url.getUserInfo,

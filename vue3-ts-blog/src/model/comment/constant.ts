@@ -27,6 +27,7 @@ const constant = {
     avatarUrl: 'avatarUrl',
     articleId: 'aid',
     createTime: 'createTime',
+    updateTime: 'updateTime',
     commentCount: 'commentCount',
     content: 'content',
     commentList: 'comments',

@@ -9,6 +9,9 @@
                     <div class="inline-container">
                         <span class="clickable" @click="viewUser(router, article[ArticleConstant.author])">{{$t('label.author')+': '+article[ArticleConstant.author][ArticleConstant.username]}}</span>
                         <span>{{$t('label.posted')+transferTimestamp(article[ArticleConstant.createTime])}}</span>
+                        <span v-if="isEdited" class="edited-mark">
+                            {{$t('label.editedAt')+transferTimestamp(article[ArticleConstant.updateTime])}}
+                        </span>
                         <span>
                             <svg-icon name="view" size="16"></svg-icon>
                             {{article[ArticleConstant.viewCount]}}
@@ -101,12 +104,17 @@ let article = reactive({
     [ArticleConstant.author]: {},
     [ArticleConstant.title]: '',
     [ArticleConstant.createTime]: 0,
+    [ArticleConstant.updateTime]: 0,
     [ArticleConstant.viewCount]: 0,
     [ArticleConstant.commentCount]: 0,
     [ArticleConstant.content]: '',
     [ArticleConstant.package]: {},
     [ArticleConstant.tags]: []
 });
+// 编辑时间比发布时间晚 60s 以上，视为「编辑过」
+const isEdited = computed(() =>
+    Number(article[ArticleConstant.updateTime]) - Number(article[ArticleConstant.createTime]) > 60
+);
 const computedPackage = computed(() => {
     if(article[ArticleConstant.package] && article[ArticleConstant.package][ArticleConstant.packageId] > 0) {
         return article[ArticleConstant.package];
@@ -236,6 +244,11 @@ onMounted(() => {
             span, a {
                 vertical-align: top;
             }
+        }
+
+        .edited-mark {
+            color: $--text-color-secondary;
+            font-size: 0.9em;
         }
         
         .comment {

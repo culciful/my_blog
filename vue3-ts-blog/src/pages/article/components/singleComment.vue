@@ -14,6 +14,7 @@
             </v-md-editor>
             <div class="inline-container info">
                 <span>{{transferTimestamp(comment[Constant.createTime])}}</span>
+                <span v-if="isEdited(comment)" class="edited-mark">{{$t('label.edited')}}</span>
                 <el-button link
                            size="small"
                            class="clickable"
@@ -60,6 +61,7 @@
                 </v-md-editor>
                 <div class="inline-container info">
                     <span>{{transferTimestamp(child[Constant.createTime])}}</span>
+                    <span v-if="isEdited(child)" class="edited-mark">{{$t('label.edited')}}</span>
                     <el-button link
                                size="small"
                                class="clickable"
@@ -223,6 +225,9 @@ const finishComment = (params) => {
 const isReply = (comment) => {
     return comment[Constant.parent] && comment[Constant.parent] !== comment[Constant.root];
 };
+// 编辑时间比发布时间晚 60s 以上，视为「编辑过」
+const isEdited = (comment) =>
+    Number(comment?.[Constant.updateTime]) - Number(comment?.[Constant.createTime]) > 60;
 
 onMounted(() => {
     childTotal.value = props.comment[Constant.commentList]?.total;
@@ -258,6 +263,10 @@ onMounted(() => {
             color: $--text-color-light;
             &.clickable:hover {
                 color: $--color-primary;
+            }
+            &.edited-mark {
+                margin-left: 6px;
+                color: $--text-color-secondary;
             }
         }
     }

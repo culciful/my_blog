@@ -16,6 +16,8 @@ export default {
         author: '作者',
         catalogue: '目录',
         posted: '发布于',
+        editedAt: '编辑于',
+        edited: '(已编辑)',
         package: '合集',
         tag: '标签',
         noArticle: '还未留下足迹哦~',

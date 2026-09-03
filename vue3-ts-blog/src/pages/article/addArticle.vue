@@ -88,7 +88,7 @@ const formRef = ref<FormInstance>();
 const form = reactive<ArticleForm>({
     title: '',
     content: '',
-    package: 1,
+    package: 0,
     tags: []
 });
 

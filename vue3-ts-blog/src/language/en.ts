@@ -16,6 +16,8 @@ export default {
         author: 'author',
         catalogue: 'catalogue',
         posted: 'posted in ',
+        editedAt: 'edited ',
+        edited: '(edited)',
         package: 'collection',
         tag: 'tags',
         noArticle: 'No footprints yet ~',

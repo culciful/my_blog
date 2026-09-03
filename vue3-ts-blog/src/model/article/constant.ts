@@ -30,6 +30,7 @@ const constant = {
     articleId: 'aid',
     title: 'title',
     createTime: 'createTime',
+    updateTime: 'updateTime',
     viewCount: 'viewCount',
     commentCount: 'commentCount',
     abstract: 'abstract',
