@@ -165,10 +165,10 @@ const clickBtn = () => {
         forgetPwdRef.value.validateField(['newPassword', 'confirmNewPwd'], valid => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.post(Constant.url.updateUserInfo, {
+                proxy.$request.post(Constant.url.resetPassword, {
                     [Constant.email]: forgetPwdForm.email,
                     [Constant.verificationCode]: forgetPwdForm.verificationCode,
-                    [Constant.password]: forgetPwdForm.newPassword
+                    [Constant.newPassword]: forgetPwdForm.newPassword
                 }).then(res => {
                     isQuerying.value = false;
                     userStore.clear();

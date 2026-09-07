@@ -41,7 +41,9 @@ const encryptUrls = [
     ApiConstant.url.authLogin,
     UserConstant.url.register,
     UserConstant.url.updateUserInfo,
-    UserConstant.url.checkPassword
+    UserConstant.url.checkPassword,
+    UserConstant.url.updatePassword,
+    UserConstant.url.resetPassword
 ];
 
 // 添加请求拦截

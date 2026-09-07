@@ -184,6 +184,11 @@ const validateEmail = (rule: any, value: any, callback: any) => {
         callback(new Error(t('inputMessage.emailSame')));
     } else callback();
 };
+const validateNewPass = (rule: any, value: any, callback: any) => {
+    if (value && value === userForm.password) {
+        callback(new Error(t('inputMessage.pwdSame')));
+    } else callback();
+};
 const validatePass2 = (rule: any, value: any, callback: any) => {
     if (value !== userForm.newPassword) {
         callback(new Error(t('inputMessage.inputNotMatch')));
@@ -192,7 +197,7 @@ const validatePass2 = (rule: any, value: any, callback: any) => {
 const rules = reactive<FormRules<UserForm>>({
     username: [...globalRules.username, { validator: validateUsername, trigger: 'blur' }],
     password: globalRules.currentPassword,
-    newPassword: globalRules.password,
+    newPassword: [...globalRules.password, { validator: validateNewPass, trigger: 'blur' }],
     confirmNewPwd: [{ validator: validatePass2, trigger: 'blur' }],
     email: [...globalRules.email, { validator: validateEmail, trigger: 'blur' }],
     verificationCode: globalRules.required
@@ -273,17 +278,12 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
         await formEl.validateField(['password', 'newPassword', 'confirmNewPwd'], (valid) => {
             if(valid) {
                 isQuerying.value = true;
-                proxy.$request.post(Constant.url.checkPassword, {
-                    [Constant.password]: userForm.password
+                proxy.$request.post(Constant.url.updatePassword, {
+                    [Constant.currentPassword]: userForm.password,
+                    [Constant.newPassword]: userForm.newPassword
                 }).then(() => {
-                    proxy.$request.post(Constant.url.updateUserInfo, {
-                        [Constant.password]: userForm.newPassword
-                    }).then(() => {
-                        isQuerying.value = false;
-                        reLogin();
-                    }).catch(err => {
-                        isQuerying.value = false;
-                    });
+                    isQuerying.value = false;
+                    reLogin();
                 }).catch(err => {
                     isQuerying.value = false;
                 });

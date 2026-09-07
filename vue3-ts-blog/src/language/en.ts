@@ -124,6 +124,7 @@ export default {
         '-10012': 'Parameter validation failed',
         '-10013': 'Unknown system error',
         '-10014': 'Invalid username or password',
-        '-10015': 'This comment can no longer be edited (time window passed or it has replies)'
+        '-10015': 'This comment can no longer be edited (time window passed or it has replies)',
+        '-10016': 'New password must be different from the current one'
     }
 };

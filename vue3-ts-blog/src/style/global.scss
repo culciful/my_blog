@@ -169,8 +169,8 @@ h1, h2, h3, h4, h5, h6 {
 .multi-line-ellipsis {
     overflow: hidden;
     position: relative;
-    line-height: 1.2em;
-    max-height: 3.6em;
+    line-height: 1.2;
+    max-height: 58px;
     text-align: justify;
     padding-right: 0
 }
@@ -187,9 +187,9 @@ h1, h2, h3, h4, h5, h6 {
     content: "";
     position: absolute;
     right: 0;
-    width: 1em;
-    height: 1em;
-    margin-top: .2em;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
     background: #fff
 }
 

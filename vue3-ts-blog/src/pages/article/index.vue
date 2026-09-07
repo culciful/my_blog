@@ -9,9 +9,6 @@
                     <div class="inline-container">
                         <span class="clickable" @click="viewUser(router, article[ArticleConstant.author])">{{$t('label.author')+': '+article[ArticleConstant.author][ArticleConstant.username]}}</span>
                         <span>{{$t('label.posted')+transferTimestamp(article[ArticleConstant.createTime])}}</span>
-                        <span v-if="isEdited" class="edited-mark">
-                            {{$t('label.editedAt')+transferTimestamp(article[ArticleConstant.updateTime])}}
-                        </span>
                         <span>
                             <svg-icon name="view" size="16"></svg-icon>
                             {{article[ArticleConstant.viewCount]}}
@@ -44,6 +41,9 @@
                     <div class="a-mt-xs">
                         <span class="a-font-body-1 span-label a-mr-xs">{{$t('label.package')+': '}}</span>
                         <el-link type="primary" :underline="false" @click="gotoPackage">{{computedPackage[ArticleConstant.packageName]}}</el-link>
+                    </div>
+                    <div v-if="isEdited" class="a-mt-xs">
+                        {{$t('label.editedAt')+transferTimestamp(article[ArticleConstant.updateTime])}}
                     </div>
                 </div>
                 <div class="comment">
@@ -257,26 +257,23 @@ onMounted(() => {
         width: 900px;
         padding-bottom: 96px;
         .title {
-            padding: 2rem 2.5rem 0;
+            padding: 32px 40px 0;
             h1 {
-                margin-bottom: 0.8em;
+                margin-bottom: 28px;
                 padding-left: 10px;
                 border-left: 5px solid $--color-theme;
-                font-size: 2.2rem;
+                font-size: 35px;
                 font-weight: 600;
             }
         }
 
         .info {
-            padding: 1rem 2.5rem 2.5rem;;
+            padding: 16px 40px 40px;
             span, a {
                 vertical-align: top;
             }
         }
 
-        .edited-mark {
-            color: $--text-color-secondary;
-        }
         .article-more {
             cursor: pointer;
             color: $--text-color-secondary;
@@ -285,7 +282,7 @@ onMounted(() => {
         }
 
         .comment {
-            padding: 2rem 0;
+            padding: 32px 0;
             border-top: $--border;
             .no-comment {
                 padding: 80px 0 24px;
