@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 
 /**
  * 登录：username 字段接受用户名或邮箱，不做严格格式校验（校验交给认证逻辑）。
- * 明文 JSON（生产走 HTTPS），也支持前端 RSA 加密后以 text/plain 传输。
+ * 明文 JSON，传输安全依赖 HTTPS（生产硬性要求）。
  */
 public record LoginRequest(
         @NotBlank(message = "username is required")

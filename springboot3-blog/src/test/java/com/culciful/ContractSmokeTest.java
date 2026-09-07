@@ -20,14 +20,6 @@ class ContractSmokeTest {
     private MockMvc mockMvc;
 
     @Test
-    void getConfReturnsRsaPublicKey() throws Exception {
-        mockMvc.perform(get("/api/getConf"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.errorCode").value(0))
-                .andExpect(jsonPath("$.result.data").isString());
-    }
-
-    @Test
     void articleWriteRequiresAuthentication() throws Exception {
         mockMvc.perform(post("/article/addArticle")
                         .contentType(MediaType.APPLICATION_JSON)

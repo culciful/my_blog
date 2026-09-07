@@ -27,13 +27,11 @@ import com.culciful.service.ImageStorageService;
 import com.culciful.service.UserService;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
-import com.culciful.security.crypto.EncryptedBody;
 import com.culciful.utils.RequestUtils;
 import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -75,8 +73,8 @@ public class UserController {
     /**
      * register
      */
-    @PostMapping(value = "register", consumes = MediaType.TEXT_PLAIN_VALUE)
-    public R<Void> registerEncrypted(@EncryptedBody @Valid RegisterRequest req) {
+    @PostMapping("register")
+    public R<Void> register(@RequestBody @Valid RegisterRequest req) {
         return userService.register(req);
     }
 
@@ -122,45 +120,25 @@ public class UserController {
         return R.ok(m);
     }
 
-    @PostMapping(value = "updateUserInfo", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping("updateUserInfo")
     public R<Void> updateMyProfile(@RequestBody @Valid UserUpdateRequest request) {
         return doUpdateMyProfile(request);
     }
 
-    @PostMapping(value = "updateUserInfo", consumes = MediaType.TEXT_PLAIN_VALUE)
-    public R<Void> updateMyProfileEncrypted(@EncryptedBody @Valid UserUpdateRequest request) {
-        return doUpdateMyProfile(request);
-    }
-
-    @PostMapping(value = "checkPassword", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping("checkPassword")
     public R<Void> checkPassword(@RequestBody @Valid PasswordCheckRequest request) {
         return doCheckPassword(request);
     }
 
-    @PostMapping(value = "checkPassword", consumes = MediaType.TEXT_PLAIN_VALUE)
-    public R<Void> checkPasswordEncrypted(@EncryptedBody @Valid PasswordCheckRequest request) {
-        return doCheckPassword(request);
-    }
-
     /** 已登录改密码：校验当前密码，改完 token_version+1（其他设备踢下线，本设备也需重登） */
-    @PostMapping(value = "updatePassword", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping("updatePassword")
     public R<Void> updatePassword(@RequestBody @Valid PasswordUpdateRequest request) {
         return doUpdatePassword(request);
     }
 
-    @PostMapping(value = "updatePassword", consumes = MediaType.TEXT_PLAIN_VALUE)
-    public R<Void> updatePasswordEncrypted(@EncryptedBody @Valid PasswordUpdateRequest request) {
-        return doUpdatePassword(request);
-    }
-
     /** 匿名忘记密码：邮箱验证码 + 新密码，改完 token_version+1 */
-    @PostMapping(value = "resetPassword", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping("resetPassword")
     public R<Void> resetPassword(@RequestBody @Valid PasswordResetRequest request) {
-        return doResetPassword(request);
-    }
-
-    @PostMapping(value = "resetPassword", consumes = MediaType.TEXT_PLAIN_VALUE)
-    public R<Void> resetPasswordEncrypted(@EncryptedBody @Valid PasswordResetRequest request) {
         return doResetPassword(request);
     }
 
