@@ -2,9 +2,6 @@ import axios, { type AxiosRequestConfig } from 'axios';
 import i18n from '@/language/i18n';
 import {ElMessage} from 'element-plus';
 import {LOGIN_STATE} from '@/utils/localStoreItem';
-import ApiConstant from '@/model/api/constant';
-import UserConstant from '@/model/user/constant';
-import {encrypt} from './encrypt';
 
 const { t } = i18n.global as any;
 const isProdEnv = import.meta.env.PROD;
@@ -36,31 +33,6 @@ const defaultConfig = {
     withCredentials: true
 };
 const axiosInstance = axios.create(defaultConfig);
-
-const encryptUrls = [
-    ApiConstant.url.authLogin,
-    UserConstant.url.register,
-    UserConstant.url.updateUserInfo,
-    UserConstant.url.checkPassword,
-    UserConstant.url.updatePassword,
-    UserConstant.url.resetPassword
-];
-
-// 添加请求拦截
-axiosInstance.interceptors.request.use(
-    config => {
-        if(encryptUrls.includes(<string>config.url)) {
-            config.headers['Content-Type'] = 'text/plain;charset=UTF-8';
-            config.data = encrypt(config.data);
-        }
-        return config;
-    },
-    error => {
-        return Promise.reject({
-            message: error.message
-        });
-    }
-);
 
 // 添加响应拦截器
 axiosInstance.interceptors.response.use(

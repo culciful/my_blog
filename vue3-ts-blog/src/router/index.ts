@@ -2,7 +2,6 @@ import type {RouterOptions} from 'vue-router';
 import {createRouter, createWebHistory} from 'vue-router';
 import Index from '../pages/index/index.vue';
 import {LOGIN_STATE} from '@/utils/localStoreItem';
-import {hasKey, getKey} from '@/utils/encrypt';
 
 const routes = [
     {
@@ -87,16 +86,7 @@ const router = createRouter<RouterOptions>({
 } as RouterOptions);
 
 export const needLoginPathReg = /^\/(user\/\S+|message|write|edit)/;
-const needConfPath = [
-    '/login',
-    '/register',
-    '/forgetPassword',
-    '/user/userCenter'
-];
-router.beforeEach(async (to, from) => {
-    if (needConfPath.includes(to.path)) {
-        if (!hasKey) await getKey();
-    }
+router.beforeEach((to, from) => {
     if (needLoginPathReg.test(to.path)) {
         const hasLogin = !!localStorage.getItem(LOGIN_STATE);
         if (!hasLogin) return {name: 'login'};
