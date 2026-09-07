@@ -31,6 +31,12 @@ public class EmailVerificationCode {
     @TableField("used_at")
     private LocalDateTime usedAt;
 
+    @TableField("attempt_count")
+    private Integer attemptCount;
+
+    @TableField("request_ip")
+    private String requestIp;
+
     @TableField("created_at")
     private LocalDateTime createdAt;
 }

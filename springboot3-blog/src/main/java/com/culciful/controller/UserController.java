@@ -28,7 +28,9 @@ import com.culciful.service.UserService;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
 import com.culciful.security.crypto.EncryptedBody;
+import com.culciful.utils.RequestUtils;
 import com.culciful.utils.SnowflakeIdGenerator;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -197,15 +199,16 @@ public class UserController {
     }
 
     @PostMapping("sendEmailCode")
-    public R<Void> sendEmailCode(@RequestBody @Valid EmailCodeRequest request) {
-        String reason = emailVerificationCodeService.sendCode(request.email(), sceneOrDefault(request.scene()));
+    public R<Void> sendEmailCode(@RequestBody @Valid EmailCodeRequest request, HttpServletRequest httpRequest) {
+        String reason = emailVerificationCodeService.sendCode(
+                request.email(), sceneOrDefault(request.scene()), RequestUtils.clientIp(httpRequest));
         if (reason == null) {
             return R.ok(null);
         }
         return switch (reason) {
             case "EMAIL_USED" -> R.fail(ResultCodeEnum.EMAIL_USED);
             case "EMAIL_NOT_FOUND" -> R.fail(ResultCodeEnum.USERNAME_ERROR);
-            case "RATE_LIMIT" -> R.fail(ResultCodeEnum.BUSINESS_ERROR);
+            case "RATE_LIMIT" -> R.fail(ResultCodeEnum.RATE_LIMITED);
             default -> R.fail(ResultCodeEnum.BUSINESS_ERROR);
         };
     }
