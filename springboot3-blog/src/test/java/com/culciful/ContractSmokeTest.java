@@ -100,6 +100,16 @@ class ContractSmokeTest {
     }
 
     @Test
+    void imageUploadRequiresAuthentication() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/comment/uploadImage")
+                        .file(new org.springframework.mock.web.MockMultipartFile(
+                                "file", "x.png", "image/png", new byte[]{1, 2, 3})))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
     void commentInboxRequiresAuthentication() throws Exception {
         mockMvc.perform(post("/comment/getCommentInbox")
                         .contentType(MediaType.APPLICATION_JSON)

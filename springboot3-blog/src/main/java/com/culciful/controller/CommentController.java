@@ -19,6 +19,7 @@ import com.culciful.pojo.BlogComment;
 import com.culciful.pojo.FileAsset;
 import com.culciful.pojo.TextBody;
 import com.culciful.pojo.UserInfo;
+import com.culciful.service.ImageStorageService;
 import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
@@ -55,6 +57,7 @@ public class CommentController {
     private final UserInfoMapper userInfoMapper;
     private final FileAssetMapper fileAssetMapper;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
+    private final ImageStorageService imageStorageService;
 
     @PostMapping("/getCommentInbox")
     public R<Map<String, Object>> inbox(@RequestBody @Valid PageSearchRequest request) {
@@ -95,6 +98,17 @@ public class CommentController {
                 .map(c -> commentItem(c, listingRoots))
                 .toList();
         return R.ok(Map.of("list", list, "total", page.getTotal()));
+    }
+
+    /** 评论插图上传：与文章插图同一套加固逻辑，但 asset_type 记成 comment_image 以便区分 */
+    @PostMapping("/uploadImage")
+    public R<Map<String, String>> uploadImage(MultipartFile file) {
+        Long selfId = currentUserId();
+        if (selfId == null) {
+            return R.fail(ResultCodeEnum.NOT_LOGIN);
+        }
+        FileAsset asset = imageStorageService.store(file, selfId, ImageStorageService.Kind.COMMENT_IMAGE);
+        return R.ok(Map.of("url", asset.getPublicUrl(), "imgUrl", asset.getPublicUrl()));
     }
 
     @PostMapping("/addComment")

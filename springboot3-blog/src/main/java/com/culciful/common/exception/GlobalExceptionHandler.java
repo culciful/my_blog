@@ -9,6 +9,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -18,7 +19,8 @@ public class GlobalExceptionHandler {
             BindException.class,
             ConstraintViolationException.class,
             HttpMessageNotReadableException.class,
-            IllegalArgumentException.class
+            IllegalArgumentException.class,
+            MaxUploadSizeExceededException.class
     })
     public R<Void> handleBadRequest(Exception ignored) {
         return R.fail(ResultCodeEnum.PARAM_ERROR);

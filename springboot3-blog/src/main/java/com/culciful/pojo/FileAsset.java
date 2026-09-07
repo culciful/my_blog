@@ -43,6 +43,12 @@ public class FileAsset {
     @TableField("content_hash")
     private String contentHash;
 
+    @TableField("width")
+    private Integer width;
+
+    @TableField("height")
+    private Integer height;
+
     @TableField("status")
     private Integer status;
 

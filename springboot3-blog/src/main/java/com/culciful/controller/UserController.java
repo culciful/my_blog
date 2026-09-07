@@ -23,6 +23,7 @@ import com.culciful.pojo.UserFollow;
 import com.culciful.pojo.UserPackage;
 import com.culciful.pojo.FileAsset;
 import com.culciful.service.EmailVerificationCodeService;
+import com.culciful.service.ImageStorageService;
 import com.culciful.service.UserService;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
@@ -42,15 +43,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.util.Base64;
 import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +66,7 @@ public class UserController {
     private final FileAssetMapper fileAssetMapper;
     private final UserService userService;
     private final EmailVerificationCodeService emailVerificationCodeService;
+    private final ImageStorageService imageStorageService;
     private final PasswordEncoder passwordEncoder;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
 
@@ -227,7 +223,7 @@ public class UserController {
     @PostMapping("uploadAvatar")
     public R<Void> uploadAvatar(
             @RequestParam(value = "file", required = false) MultipartFile file,
-            @RequestParam(value = "image", required = false) String image) throws Exception {
+            @RequestParam(value = "image", required = false) String image) {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -535,100 +531,14 @@ public class UserController {
         return asset == null ? null : asset.getPublicUrl();
     }
 
-    private FileAsset resolveAvatarAsset(MultipartFile file, String image, Long ownerId) throws Exception {
+    private FileAsset resolveAvatarAsset(MultipartFile file, String image, Long ownerId) {
         if (!isBlank(image)) {
-            return saveBase64Upload(image, ownerId, "avatar");
+            return imageStorageService.storeDataUrl(image, ownerId, ImageStorageService.Kind.AVATAR);
         }
         if (file != null && !file.isEmpty()) {
-            String original = file.getOriginalFilename();
-            if (original == null || original.isBlank()) {
-                String text = new String(file.getBytes());
-                if (text.startsWith("data:")) {
-                    return saveBase64Upload(text, ownerId, "avatar");
-                }
-            }
-            return saveUpload(file, ownerId, "avatar");
+            return imageStorageService.store(file, ownerId, ImageStorageService.Kind.AVATAR);
         }
         throw new IllegalArgumentException("file is required");
-    }
-
-    private FileAsset saveUpload(MultipartFile file, Long ownerId, String type) throws Exception {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("file is required");
-        }
-        String original = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename();
-        String ext = original.contains(".") ? original.substring(original.lastIndexOf('.')) : "";
-        long id = snowflakeIdGenerator.nextId();
-        Path dir = Path.of("uploads", type);
-        Files.createDirectories(dir);
-        Path target = dir.resolve(id + ext).normalize();
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (InputStream in = file.getInputStream()) {
-            Files.copy(in, target);
-        }
-        byte[] bytes = Files.readAllBytes(target);
-        String hash = HexFormat.of().formatHex(digest.digest(bytes));
-        FileAsset asset = new FileAsset();
-        asset.setId(id);
-        asset.setOwnerUserId(ownerId);
-        asset.setAssetType(type);
-        asset.setProvider("local");
-        asset.setBucket(null);
-        asset.setStorageKey(target.toString().replace('\\', '/'));
-        asset.setPublicUrl("/uploads/" + type + "/" + target.getFileName());
-        asset.setMimeType(file.getContentType() == null ? "application/octet-stream" : file.getContentType());
-        asset.setSizeBytes(file.getSize());
-        asset.setContentHash(hash);
-        asset.setStatus(1);
-        asset.setCreatedAt(LocalDateTime.now());
-        asset.setUpdatedAt(LocalDateTime.now());
-        fileAssetMapper.insert(asset);
-        return asset;
-    }
-
-    private FileAsset saveBase64Upload(String dataUrl, Long ownerId, String type) throws Exception {
-        if (isBlank(dataUrl)) {
-            throw new IllegalArgumentException("file is required");
-        }
-        String mimeType = "image/png";
-        String payload = dataUrl;
-        if (dataUrl.startsWith("data:")) {
-            int semicolon = dataUrl.indexOf(';');
-            int comma = dataUrl.indexOf(',');
-            if (semicolon > 5) {
-                mimeType = dataUrl.substring(5, semicolon);
-            }
-            if (comma > -1) {
-                payload = dataUrl.substring(comma + 1);
-            }
-        }
-        byte[] bytes = Base64.getDecoder().decode(payload);
-        String ext = switch (mimeType) {
-            case "image/jpeg", "image/jpg" -> ".jpg";
-            case "image/webp" -> ".webp";
-            default -> ".png";
-        };
-        long id = snowflakeIdGenerator.nextId();
-        Path dir = Path.of("uploads", type);
-        Files.createDirectories(dir);
-        Path target = dir.resolve(id + ext).normalize();
-        Files.write(target, bytes);
-        FileAsset asset = new FileAsset();
-        asset.setId(id);
-        asset.setOwnerUserId(ownerId);
-        asset.setAssetType(type);
-        asset.setProvider("local");
-        asset.setBucket(null);
-        asset.setStorageKey(target.toString().replace('\\', '/'));
-        asset.setPublicUrl("/uploads/" + type + "/" + target.getFileName());
-        asset.setMimeType(mimeType);
-        asset.setSizeBytes((long) bytes.length);
-        asset.setContentHash(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
-        asset.setStatus(1);
-        asset.setCreatedAt(LocalDateTime.now());
-        asset.setUpdatedAt(LocalDateTime.now());
-        fileAssetMapper.insert(asset);
-        return asset;
     }
 
     private String sceneOrDefault(String scene) {

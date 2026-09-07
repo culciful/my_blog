@@ -22,6 +22,7 @@ import com.culciful.pojo.FileAsset;
 import com.culciful.pojo.TextBody;
 import com.culciful.pojo.UserInfo;
 import com.culciful.pojo.UserPackage;
+import com.culciful.service.ImageStorageService;
 import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,9 +37,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -63,6 +61,7 @@ public class ArticleController {
     private final UserPackageMapper userPackageMapper;
     private final FileAssetMapper fileAssetMapper;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
+    private final ImageStorageService imageStorageService;
 
     @GetMapping("/getTags")
     public R<Map<String, Object>> tags() {
@@ -213,7 +212,7 @@ public class ArticleController {
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        FileAsset asset = saveUpload(file, selfId, "article_image");
+        FileAsset asset = imageStorageService.store(file, selfId, ImageStorageService.Kind.ARTICLE_IMAGE);
         return R.ok(Map.of("url", asset.getPublicUrl(), "imgUrl", asset.getPublicUrl()));
     }
 
@@ -329,37 +328,6 @@ public class ArticleController {
         text.setCreatedAt(LocalDateTime.now());
         textBodyMapper.insert(text);
         return text.getId();
-    }
-
-    private FileAsset saveUpload(MultipartFile file, Long ownerId, String type) throws Exception {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("file is required");
-        }
-        String original = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename();
-        String ext = original.contains(".") ? original.substring(original.lastIndexOf('.')) : "";
-        long id = snowflakeIdGenerator.nextId();
-        Path dir = Path.of("uploads", type);
-        Files.createDirectories(dir);
-        Path target = dir.resolve(id + ext).normalize();
-        try (InputStream in = file.getInputStream()) {
-            Files.copy(in, target);
-        }
-        byte[] bytes = Files.readAllBytes(target);
-        FileAsset asset = new FileAsset();
-        asset.setId(id);
-        asset.setOwnerUserId(ownerId);
-        asset.setAssetType(type);
-        asset.setProvider("local");
-        asset.setStorageKey(target.toString().replace('\\', '/'));
-        asset.setPublicUrl("/uploads/" + type + "/" + target.getFileName());
-        asset.setMimeType(file.getContentType() == null ? "application/octet-stream" : file.getContentType());
-        asset.setSizeBytes(file.getSize());
-        asset.setContentHash(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
-        asset.setStatus(1);
-        asset.setCreatedAt(LocalDateTime.now());
-        asset.setUpdatedAt(LocalDateTime.now());
-        fileAssetMapper.insert(asset);
-        return asset;
     }
 
     private String avatarUrl(Long avatarAssetId) {
