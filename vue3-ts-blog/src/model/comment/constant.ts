@@ -8,7 +8,8 @@ const urlMap = {
     getComments: 'getComments',
     addComment: 'addComment',
     editComment: 'editComment',
-    deleteComment: 'deleteComment'
+    deleteComment: 'deleteComment',
+    uploadImage: 'uploadImage'
 };
 
 const constant = {
@@ -17,7 +18,8 @@ const constant = {
         commentsByArticleSearch: makeUrl(urlMap.getComments),
         addComment: makeUrl(urlMap.addComment),
         editComment: makeUrl(urlMap.editComment),
-        deleteComment: makeUrl(urlMap.deleteComment)
+        deleteComment: makeUrl(urlMap.deleteComment),
+        uploadImage: makeUrl(urlMap.uploadImage)
     },
     userId: 'id',
     authorId: 'authorId',

@@ -125,6 +125,8 @@ export default {
         '-10013': 'Unknown system error',
         '-10014': 'Invalid username or password',
         '-10015': 'This comment can no longer be edited (time window passed or it has replies)',
-        '-10016': 'New password must be different from the current one'
+        '-10016': 'New password must be different from the current one',
+        '-10017': 'Too many failed login attempts, please try again later',
+        '-10018': 'Too many requests, please try again later'
     }
 };

@@ -29,7 +29,6 @@
 import {getCurrentInstance, ref, watch} from 'vue';
 import {useUserStore} from '@/stores/user';
 import Constant from '@/model/comment/constant';
-import ArticleConstant from '@/model/article/constant';
 import i18n from '@/language/i18n';
 import {ElMessage} from 'element-plus';
 import {deepCopy} from '@/utils/utils';
@@ -84,7 +83,7 @@ function handleUploadImage(event, insertImage, files) {
     if (!files || !files[0]) return;
     const formData = new FormData();
     formData.append('file', files[0]);
-    proxy.$request.post(ArticleConstant.url.uploadImage, formData, {
+    proxy.$request.post(Constant.url.uploadImage, formData, {
         headers: {'Content-Type': 'multipart/form-data'}
     }).then(res => {
         insertImage({ url: res.result.url, desc: '' });
