@@ -26,19 +26,5 @@ public class TestUtils {
         boolean expiration = jwtHelper.isExpiration(token);
         System.out.println("expiration = " + expiration);
     }
-
-    // @Test
-    // public void testRSA() throws UnsupportedEncodingException {
-    //     String publicKey = RSAUtil.getPublicKey();
-    //     System.out.println("publicKey = " + publicKey);
-    //     String getPrivateKey = RSAUtil.getPrivateKey();
-    //
-    //     String str = "{username: '123345张三hh', password: '123345'}";
-    //     byte[] encrypt = RSAUtil.encrypt(str);
-    //     System.out.println("encrypt = " + encrypt);
-    //     String decrypt = RSAUtil.decrypt(encrypt);
-    //     System.out.println("decrypt = " + decrypt);
-    //
-    // }
 }
 
