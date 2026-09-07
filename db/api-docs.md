@@ -16,7 +16,7 @@
 - 标注“仅成功/失败”的接口，前端不消费 `result` 内容
 - **ID 字段是字符串**（`id`/`aid`/`cid`/`pid`…，雪花 ID 防精度丢失）；`createTime`/`updateTime` 是**绝对时间戳（秒）**，前端按浏览器时区展示
 
-错误码见后端 `common/enums/ResultCodeEnum`：`-10004` 未登录、`-10005` 用户名错误、`-10006` 密码错误、`-10007` 用户名已用、`-10008` 邮箱已用、`-10009` 无权限、`-10010` 资源不存在、`-10011` 业务错误、`-10012` 参数校验失败、`-10013` 系统错误、`-10014` 登录失败（用户名或密码错误，不区分「用户不存在」以防枚举）、`-10015` 评论超过可编辑时间或已有回复。
+错误码见后端 `common/enums/ResultCodeEnum`：`-10004` 未登录、`-10005` 用户名错误、`-10006` 密码错误、`-10007` 用户名已用、`-10008` 邮箱已用、`-10009` 无权限、`-10010` 资源不存在、`-10011` 业务错误、`-10012` 参数校验失败、`-10013` 系统错误、`-10014` 登录失败（用户名或密码错误，不区分「用户不存在」以防枚举）、`-10015` 评论超过可编辑时间或已有回复、`-10016` 改密码时新密码与当前密码相同。
 
 ## 2) 路由前缀
 
@@ -26,7 +26,8 @@
 - 评论域：`/comment/**`
 
 需前端 RSA 加密后以 `text/plain` 传输的接口（`request.ts` 拦截器处理）：
-`/api/auth/login`、`/user/register`、`/user/updateUserInfo`、`/user/checkPassword`。
+`/api/auth/login`、`/user/register`、`/user/updateUserInfo`、`/user/checkPassword`、
+`/user/updatePassword`、`/user/resetPassword`。
 
 ## 3) API 列表
 
@@ -58,8 +59,10 @@
 | `/user/checkEmailExist` | POST | 检查邮箱是否已注册 → `{ isExisted }` | `register.vue`、`forgetPassword.vue` |
 | `/user/getUserInfo` | GET `?id=` | 指定用户公开资料 | `manageContent.vue` |
 | `/user/getMyProfile` | GET | 当前登录用户完整资料（含 email） | `App.vue`、`userCenter.vue` |
-| `/user/updateUserInfo` | POST（json 或 text/plain 加密） | 改用户名/邮箱/密码；未登录时走邮箱重置密码 | `userCenter.vue`、`forgetPassword.vue` |
+| `/user/updateUserInfo` | POST（json 或 text/plain 加密） | **需登录**，改用户名 / 邮箱（改邮箱需验证码）；不再处理密码 | `userCenter.vue` |
 | `/user/checkPassword` | POST（json 或 text/plain 加密） | 校验当前用户密码 | `userCenter.vue`、`checkPwdDialog.vue` |
+| `/user/updatePassword` | POST（json 或 text/plain 加密） | **需登录**，校验当前密码后改密；改完 `token_version+1`，所有旧 token 失效 | `userCenter.vue` |
+| `/user/resetPassword` | POST（json 或 text/plain 加密） | **匿名**，邮箱验证码（scene=reset）+ 新密码；改完 `token_version+1` | `forgetPassword.vue` |
 | `/user/getStat` | GET | 文章数/关注/粉丝 → `{ articleCount, following, follower }` | `userCenter.vue` |
 | `/user/getFollowings` | POST | 分页查询关注列表 | `follow.vue` |
 | `/user/getFollowers` | POST | 分页查询粉丝列表 | `follow.vue` |
@@ -77,9 +80,16 @@
 返回：`{ list: [{ id, username, avatarUrl, createTime, followed, mutual }], total }`
 > 不返回他人 `email`。`followed` = 当前用户是否关注了 ta；`mutual` = 互相关注。
 
-`updateUserInfo` body（按场景传字段）：`username` / `email` + `verificationCode` / `password`。
-> ⚠ 安全整改（见 `项目完成度评估与计划书.md` A7/A8）：此接口后续将拆为
-> `POST /user/updatePassword`（登录 + 校验当前密码）与 `POST /user/resetPassword`（匿名 + 邮箱验证码）。
+`updateUserInfo` body（按场景传字段，需登录）：`username` / `email` + `verificationCode`。
+改邮箱成功后 `token_version+1`（当前设备也需重新登录）。
+
+`updatePassword` body：`{ currentPassword, newPassword }`（需登录）。当前密码错 → `-10006`；新密码与当前密码相同 → `-10016`。
+`resetPassword` body：`{ email, verificationCode, newPassword }`（匿名）。验证码错 → `-10012`；邮箱不存在 → `-10005`。
+> 改密 / 重置成功后 `token_version+1`，改密前签发的所有 JWT 立即失效 → 前端统一 `reLogin()`。
+
+**`token_version` 机制**：`user_info.token_version`（BIGINT，默认 0）。签发 JWT 时写入 `tv` claim；
+`JwtAuthenticationFilter` 每次鉴权按 `userId` 查库比对 `tv`，不一致即拒绝（401 / `-10004`）。
+改密码、改邮箱时 `token_version+1`，等效于「全设备登出」。滑动续期：token 剩余有效期 < 一半时自动重签 cookie。
 
 `register` body：`{ email, username, password, verificationCode }`。username 1~20 位、不含 `@`；password 8~64 位、至少含字母；改用户名 / 改密码同此规则。
 
