@@ -73,12 +73,30 @@ class ContractSmokeTest {
     }
 
     @Test
-    void unauthenticatedPasswordResetRequiresVerificationFields() throws Exception {
+    void updateUserInfoRequiresAuthentication() throws Exception {
         mockMvc.perform(post("/user/updateUserInfo")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"password\":\"NewPass1\"}"))
-                .andExpect(status().isOk())
+                        .content("{\"username\":\"newname\"}"))
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
+    void updatePasswordRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/user/updatePassword")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"Test1234\",\"newPassword\":\"NewPass12\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
+    void resetPasswordValidatesFields() throws Exception {
+        mockMvc.perform(post("/user/resetPassword")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"x@example.com\",\"newPassword\":\"short\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(-10012));
     }
 
     @Test

@@ -19,7 +19,9 @@ public enum ResultCodeEnum {
     /** 登录失败：不区分「用户不存在」与「密码错误」，避免用户枚举 */
     LOGIN_FAILED(-10014, "invalid username or password"),
     /** 评论已超过可编辑时间窗，或已有回复 */
-    COMMENT_EDIT_LOCKED(-10015, "comment can no longer be edited");
+    COMMENT_EDIT_LOCKED(-10015, "comment can no longer be edited"),
+    /** 改密码时新密码与当前密码相同 */
+    PASSWORD_NOT_CHANGED(-10016, "new password must be different from the current one");
 
     private final Integer errorCode;
     private final String message;

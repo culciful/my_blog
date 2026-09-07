@@ -14,6 +14,8 @@ import com.culciful.dto.PackageRefRequest;
 import com.culciful.dto.PackageRequest;
 import com.culciful.dto.PageSearchRequest;
 import com.culciful.dto.PasswordCheckRequest;
+import com.culciful.dto.PasswordResetRequest;
+import com.culciful.dto.PasswordUpdateRequest;
 import com.culciful.dto.RegisterRequest;
 import com.culciful.dto.UserUpdateRequest;
 import com.culciful.pojo.UserInfo;
@@ -140,6 +142,28 @@ public class UserController {
     @PostMapping(value = "checkPassword", consumes = MediaType.TEXT_PLAIN_VALUE)
     public R<Void> checkPasswordEncrypted(@EncryptedBody @Valid PasswordCheckRequest request) {
         return doCheckPassword(request);
+    }
+
+    /** 已登录改密码：校验当前密码，改完 token_version+1（其他设备踢下线，本设备也需重登） */
+    @PostMapping(value = "updatePassword", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public R<Void> updatePassword(@RequestBody @Valid PasswordUpdateRequest request) {
+        return doUpdatePassword(request);
+    }
+
+    @PostMapping(value = "updatePassword", consumes = MediaType.TEXT_PLAIN_VALUE)
+    public R<Void> updatePasswordEncrypted(@EncryptedBody @Valid PasswordUpdateRequest request) {
+        return doUpdatePassword(request);
+    }
+
+    /** 匿名忘记密码：邮箱验证码 + 新密码，改完 token_version+1 */
+    @PostMapping(value = "resetPassword", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public R<Void> resetPassword(@RequestBody @Valid PasswordResetRequest request) {
+        return doResetPassword(request);
+    }
+
+    @PostMapping(value = "resetPassword", consumes = MediaType.TEXT_PLAIN_VALUE)
+    public R<Void> resetPasswordEncrypted(@EncryptedBody @Valid PasswordResetRequest request) {
+        return doResetPassword(request);
     }
 
     @GetMapping("getStat")
@@ -331,16 +355,18 @@ public class UserController {
         return R.ok(null);
     }
 
+    /** 已登录改资料：仅用户名 / 邮箱（改邮箱需验证码，且 token_version+1）。改密码走 updatePassword。 */
     private R<Void> doUpdateMyProfile(UserUpdateRequest request) {
         Long selfId = currentUserId();
-        if (request == null || (isBlank(request.username()) && isBlank(request.email()) && isBlank(request.password()))) {
-            return R.fail(ResultCodeEnum.PARAM_ERROR);
-        }
         if (selfId == null) {
-            return resetPasswordByEmail(request);
+            return R.fail(ResultCodeEnum.NOT_LOGIN);
+        }
+        if (request == null || (isBlank(request.username()) && isBlank(request.email()))) {
+            return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
         UserInfo user = new UserInfo();
         user.setId(selfId);
+        boolean emailChanged = false;
         if (!isBlank(request.username())) {
             user.setUsername(request.username());
         }
@@ -353,19 +379,34 @@ public class UserController {
                 return R.fail(ResultCodeEnum.PARAM_ERROR);
             }
             user.setEmail(request.email());
-        }
-        if (!isBlank(request.password())) {
-            user.setPassword(passwordEncoder.encode(request.password()));
+            emailChanged = true;
         }
         user.setUpdatedAt(LocalDateTime.now());
         userInfoMapper.updateById(user);
+        if (emailChanged) {
+            bumpTokenVersion(selfId);
+        }
         return R.ok(null);
     }
 
-    private R<Void> resetPasswordByEmail(UserUpdateRequest request) {
-        if (isBlank(request.email()) || isBlank(request.password()) || isBlank(request.verificationCode())) {
+    private R<Void> doUpdatePassword(PasswordUpdateRequest request) {
+        Long selfId = currentUserId();
+        if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
+        UserInfo user = loadActiveUser(selfId);
+        if (user == null || user.getPassword() == null
+                || !passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            return R.fail(ResultCodeEnum.PASSWORD_ERROR);
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            return R.fail(ResultCodeEnum.PASSWORD_NOT_CHANGED);
+        }
+        applyNewPassword(selfId, request.newPassword());
+        return R.ok(null);
+    }
+
+    private R<Void> doResetPassword(PasswordResetRequest request) {
         if (!emailVerificationCodeService.consumeCode(
                 request.email(),
                 request.verificationCode(),
@@ -379,10 +420,24 @@ public class UserController {
         if (user == null) {
             return R.fail(ResultCodeEnum.USERNAME_ERROR);
         }
-        user.setPassword(passwordEncoder.encode(request.password()));
-        user.setUpdatedAt(LocalDateTime.now());
-        userInfoMapper.updateById(user);
+        applyNewPassword(user.getId(), request.newPassword());
         return R.ok(null);
+    }
+
+    /** 落新密码 + token_version+1（改密后所有旧 token 失效，需重新登录） */
+    private void applyNewPassword(Long userId, String rawNewPassword) {
+        UserInfo update = new UserInfo();
+        update.setId(userId);
+        update.setPassword(passwordEncoder.encode(rawNewPassword));
+        update.setUpdatedAt(LocalDateTime.now());
+        userInfoMapper.updateById(update);
+        bumpTokenVersion(userId);
+    }
+
+    private void bumpTokenVersion(Long userId) {
+        userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
+                .setSql("token_version = token_version + 1")
+                .eq(UserInfo::getId, userId));
     }
 
     private R<Void> doCheckPassword(PasswordCheckRequest request) {

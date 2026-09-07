@@ -32,16 +32,25 @@ mybatis-plus:
 
 jwt:
   token:
-    # unit: minutes
-    tokenExpiration: ${JWT_TOKEN_EXPIRATION:10080}
-    # HS512: use a long random secret in production (e.g. openssl rand -hex 64)
-    tokenSignKey: ${JWT_TOKEN_SIGN_KEY:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    # token lifetime in minutes; default 30 days. Active users get a sliding
+    # renewal, so only idle sessions past this window must log in again.
+    tokenExpiration: ${JWT_TOKEN_EXPIRATION:43200}
+    # HS512 signing key: no default. Production MUST inject JWT_TOKEN_SIGN_KEY
+    # (openssl rand -hex 64); JwtHelper rejects startup if it is < 64 chars.
+    # The fixed local-dev key lives in application-dev.yaml.
+    tokenSignKey: ${JWT_TOKEN_SIGN_KEY:}
   cookie:
     name: ${JWT_COOKIE_NAME:BLOG_TOKEN}
     path: /
     same-site: Lax
 
-# Cross-origin allowlist (dev). Prod same-site: keep empty — see application-prod.yaml.
+# Cross-origin allowlist (dev). Prod same-site: keep empty -- see application-prod.yaml.
 blog:
   cors:
     allowed-origins: []
+  # Login failure throttle: count by username+IP, lock after max-attempts
+  # consecutive failures for lock-duration.
+  login-rate-limit:
+    enabled: ${LOGIN_RATE_LIMIT_ENABLED:true}
+    max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
+    lock-duration: ${LOGIN_LOCK_DURATION:15m}

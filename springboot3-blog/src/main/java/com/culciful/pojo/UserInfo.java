@@ -92,4 +92,10 @@ public class UserInfo {
      */
     @TableField("deleted_token")
     private Long deletedToken;
+
+    /**
+     * JWT 版本号：改密 / 改邮箱 / 全设备登出时 +1，令旧 token 失效
+     */
+    @TableField("token_version")
+    private Long tokenVersion;
 }

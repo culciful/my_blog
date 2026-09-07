@@ -4,6 +4,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * 已登录改资料：用户名 / 邮箱。改密码走 PasswordUpdateRequest。
+ */
 public record UserUpdateRequest(
         @Size(min = 1, max = 20)
         // 禁止 @：避免用户名与他人邮箱字面相同造成登录歧义
@@ -15,9 +18,5 @@ public record UserUpdateRequest(
         String email,
 
         @Size(max = 16)
-        String verificationCode,
-
-        @Size(min = 8, max = 64)
-        @Pattern(regexp = "^(?=.*[a-zA-Z])[A-Za-z\\d~!@#$%^&*()_+|}{\\[\\]\\\\/?><:\"`;.,'-]{8,64}$")
-        String password
+        String verificationCode
 ) {}

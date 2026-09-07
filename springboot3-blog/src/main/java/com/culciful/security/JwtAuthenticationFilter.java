@@ -1,6 +1,8 @@
 package com.culciful.security;
 
 import com.culciful.config.JwtCookieProperties;
+import com.culciful.mapper.UserInfoMapper;
+import com.culciful.pojo.UserInfo;
 import com.culciful.security.token.JwtHelper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,7 +21,8 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Reads JWT from HttpOnly cookie and populates {@link SecurityContextHolder}.
+ * 从 HttpOnly cookie 读 JWT，校验签名 / 有效期 / token_version，通过则写入 SecurityContext。
+ * 剩余寿命不足一半时滑动续期（重新下发 cookie），活跃用户不会因超时掉线。
  */
 @Component
 @RequiredArgsConstructor
@@ -27,6 +30,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtHelper jwtHelper;
     private final JwtCookieProperties cookieProperties;
+    private final JwtCookieService jwtCookieService;
+    private final UserInfoMapper userInfoMapper;
 
     @Override
     protected void doFilterInternal(
@@ -38,7 +43,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = readTokenFromCookie(request);
             if (token != null && !jwtHelper.isExpiration(token)) {
                 Long userId = jwtHelper.getUserId(token);
-                if (userId != null) {
+                UserInfo user = userId == null ? null : userInfoMapper.selectById(userId);
+                if (user != null && tokenVersionMatches(user, token)) {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userId.toString(),
@@ -46,12 +52,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     List.of(new SimpleGrantedAuthority("ROLE_USER"))
                             );
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                    if (jwtHelper.shouldRenew(token)) {
+                        String fresh = jwtHelper.createToken(userId, versionOf(user));
+                        jwtCookieService.addTokenCookie(response, fresh, jwtHelper.cookieMaxAgeSeconds());
+                    }
                 }
             }
         } catch (Exception ignored) {
-            // invalid cookie: leave unauthenticated, do not clear an existing context
+            // 无效 cookie：保持未认证，不清空已有 context
         }
         filterChain.doFilter(request, response);
+    }
+
+    private boolean tokenVersionMatches(UserInfo user, String token) {
+        return versionOf(user) == jwtHelper.getTokenVersion(token);
+    }
+
+    private long versionOf(UserInfo user) {
+        return user.getTokenVersion() == null ? 0L : user.getTokenVersion();
     }
 
     private String readTokenFromCookie(HttpServletRequest request) {

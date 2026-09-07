@@ -33,7 +33,8 @@ public class UserAuthServiceImpl implements UserAuthService {
         if (user == null) {
             return R.fail(ResultCodeEnum.LOGIN_FAILED);
         }
-        String jwt = jwtHelper.createToken(user.getId().longValue());
+        long tv = user.getTokenVersion() == null ? 0L : user.getTokenVersion();
+        String jwt = jwtHelper.createToken(user.getId(), tv);
         jwtCookieService.addTokenCookie(response, jwt, jwtHelper.cookieMaxAgeSeconds());
         return R.ok(toProfileMap(user, true));
     }

@@ -44,7 +44,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/user/checkEmailExist").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user/sendEmailCode").permitAll()
                         .requestMatchers(HttpMethod.POST, "/user/checkEmailCode").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/user/updateUserInfo").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/user/resetPassword").permitAll()
                         .requestMatchers(HttpMethod.GET, "/user/getUserInfo").permitAll()
                         .requestMatchers(HttpMethod.GET, "/article/getTags").permitAll()
                         .requestMatchers(HttpMethod.GET, "/article/getArticleInfo").permitAll()
