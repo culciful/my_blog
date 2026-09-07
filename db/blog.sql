@@ -40,7 +40,7 @@ CREATE TABLE `user_info` (
 CREATE TABLE `file_asset` (
   `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
   `owner_user_id` BIGINT UNSIGNED NOT NULL COMMENT '上传者用户ID',
-  `asset_type` VARCHAR(32) NOT NULL COMMENT '资源类型: avatar/article_image/attachment',
+  `asset_type` VARCHAR(32) NOT NULL COMMENT '资源类型: avatar/article_image/comment_image/attachment',
   `provider` VARCHAR(32) NOT NULL DEFAULT 'local' COMMENT '存储提供商',
   `bucket` VARCHAR(128) DEFAULT NULL COMMENT '存储桶',
   `storage_key` VARCHAR(512) NOT NULL COMMENT '对象存储Key',
@@ -154,9 +154,12 @@ CREATE TABLE `email_verification_code` (
   `code_hash` VARCHAR(128) NOT NULL COMMENT '验证码哈希',
   `expires_at` DATETIME(3) NOT NULL COMMENT '过期时间(UTC)',
   `used_at` DATETIME(3) NULL DEFAULT NULL COMMENT '使用时间(UTC)',
+  `attempt_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '校验失败次数, 超过上限即作废',
+  `request_ip` VARCHAR(45) DEFAULT NULL COMMENT '发起请求的客户端IP, 用于按IP限流',
   `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
   PRIMARY KEY (`id`),
   KEY `idx_email_scene_time` (`email`, `scene`, `created_at`),
+  KEY `idx_ip_time` (`request_ip`, `created_at`),
   KEY `idx_expires_at` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='邮箱验证码表';
 

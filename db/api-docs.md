@@ -16,7 +16,7 @@
 - 标注“仅成功/失败”的接口，前端不消费 `result` 内容
 - **ID 字段是字符串**（`id`/`aid`/`cid`/`pid`…，雪花 ID 防精度丢失）；`createTime`/`updateTime` 是**绝对时间戳（秒）**，前端按浏览器时区展示
 
-错误码见后端 `common/enums/ResultCodeEnum`：`-10004` 未登录、`-10005` 用户名错误、`-10006` 密码错误、`-10007` 用户名已用、`-10008` 邮箱已用、`-10009` 无权限、`-10010` 资源不存在、`-10011` 业务错误、`-10012` 参数校验失败、`-10013` 系统错误、`-10014` 登录失败（用户名或密码错误，不区分「用户不存在」以防枚举）、`-10015` 评论超过可编辑时间或已有回复、`-10016` 改密码时新密码与当前密码相同。
+错误码见后端 `common/enums/ResultCodeEnum`：`-10004` 未登录、`-10005` 用户名错误、`-10006` 密码错误、`-10007` 用户名已用、`-10008` 邮箱已用、`-10009` 无权限、`-10010` 资源不存在、`-10011` 业务错误、`-10012` 参数校验失败、`-10013` 系统错误、`-10014` 登录失败（用户名或密码错误，不区分「用户不存在」以防枚举）、`-10015` 评论超过可编辑时间或已有回复、`-10016` 改密码时新密码与当前密码相同、`-10017` 登录失败次数过多被临时锁定、`-10018` 请求过于频繁（发验证码触发限流）。
 
 ## 2) 路由前缀
 
@@ -50,6 +50,7 @@
 
 返回：`{ id, username, avatarUrl, createTime, email }`
 登录失败统一返回 `-10014`（不区分用户不存在 / 密码错误）。`username` 含 `@` 按邮箱匹配，否则按用户名匹配。
+限流：同一 `用户名+客户端IP` 连续失败 5 次锁定 15 分钟（内存计数，`blog.login-rate-limit.*` 可调），锁定期间返回 `-10017`；成功登录清零。
 
 ### 3.2 User（`/user`）
 
@@ -67,8 +68,8 @@
 | `/user/getFollowings` | POST | 分页查询关注列表 | `follow.vue` |
 | `/user/getFollowers` | POST | 分页查询粉丝列表 | `follow.vue` |
 | `/user/sendEmailCode` | POST | 发送邮箱验证码（`scene`: register/reset/update_email） | `register.vue`、`forgetPassword.vue`、`userCenter.vue` |
-| `/user/checkEmailCode` | POST | 校验邮箱验证码 | `forgetPassword.vue` |
-| `/user/uploadAvatar` | POST（form-data） | 上传头像（`file` 或 base64 `image`） | `uploadAvatar.vue` |
+| `/user/checkEmailCode` | POST | 校验邮箱验证码（不消费） | `forgetPassword.vue` |
+| `/user/uploadAvatar` | POST（form-data） | 上传头像（`file` 或 base64 `image`），需登录 | `uploadAvatar.vue` |
 | `/user/checkHasFollow` | GET `?id=` | 查询对目标用户的关注状态 → `{ data: boolean }` | `manageContent.vue` |
 | `/user/switchFollow` | POST | 关注/取关，body `{ id, value }` | `manageContent.vue`、`follow.vue` |
 | `/user/getPackages` | GET `?id=` | 用户的文章分组列表 → `{ list: [{ pid, pname }] }` | `addArticle.vue`、`manageContent.vue` |
@@ -87,6 +88,14 @@
 `resetPassword` body：`{ email, verificationCode, newPassword }`（匿名）。验证码错 → `-10012`；邮箱不存在 → `-10005`。
 > 改密 / 重置成功后 `token_version+1`，改密前签发的所有 JWT 立即失效 → 前端统一 `reLogin()`。
 
+**邮箱验证码加固**（`EmailVerificationCodeServiceImpl`，`blog.email-code.*` 可调）：
+> - 6 位数字、10 分钟有效、bcrypt 存哈希
+> - 单个验证码校验失败 5 次即作废（需重新获取）
+> - 发送限流：同邮箱+场景 60s 冷却；同邮箱 ≤10 次/日；同 IP ≤10 次/时、≤30 次/日；命中返回 `-10018`
+> - `email_verification_code` 表新增 `attempt_count`、`request_ip`
+> - 发信：配了 `spring.mail.host` 就真发（dev 可指向 Mailhog:1025），否则打日志 `dev email verification code for ... : 123456`
+> - `checkEmailCode` 只校验不消费；实际消费在 `register` / `updateUserInfo`(改邮箱) / `resetPassword` 里 `consumeCode`
+
 **`token_version` 机制**：`user_info.token_version`（BIGINT，默认 0）。签发 JWT 时写入 `tv` claim；
 `JwtAuthenticationFilter` 每次鉴权按 `userId` 查库比对 `tv`，不一致即拒绝（401 / `-10004`）。
 改密码、改邮箱时 `token_version+1`，等效于「全设备登出」。滑动续期：token 剩余有效期 < 一半时自动重签 cookie。
@@ -102,7 +111,8 @@
 | `/article/addArticle` | POST | 新建文章 → `{ id }` | `addArticle.vue` |
 | `/article/editArticle` | POST | 编辑文章，body 含 `aid` → `{ id }` | `addArticle.vue` |
 | `/article/deleteArticle` | POST | 删除文章，body `{ aid }` | `article/components/list.vue` |
-| `/article/uploadImage` | POST（form-data） | 上传正文图片 → `{ url, imgUrl }` | `addArticle.vue` |
+| `/article/uploadImage` | POST（form-data） | 上传正文图片 → `{ url, imgUrl }`，需登录 | `addArticle.vue` |
+| `/comment/uploadImage` | POST（form-data） | 上传评论插图 → `{ url, imgUrl }`，需登录（`asset_type=comment_image`） | `addComment.vue` |
 | `/article/getTags` | GET | 标签列表 → `{ list: string[] }` | `addArticle.vue` |
 
 `getArticleList` body：`{ pageSize, currentPage, filter: { keyword?, id?（作者）, pid?（分组）, tag? } }`
@@ -129,7 +139,16 @@
 > 无 `root`（列根评论）：每条根评论的 `comments` 内联返回**前 2 条子回复** + `total`（`PREVIEW_REPLIES`）。前端不再逐条挂载请求；`total > 已展示数` 时显示「展开 N 条回复」，点击才带 `root` 拉全量（分页）。
 > 有 `root`（列某根评论的回复）：返回该根下的全部子回复（分页），子项不再嵌套 `comments`。
 `addComment` body：`{ aid, authorId, useMD, content:{msg}, parent?, root? }`
-> 评论 Markdown 里插图也走 `POST /article/uploadImage`（登录用户通用图片上传），暂无独立的 `/comment/uploadImage`；因此评论图在 `file_asset` 里 `asset_type` 记为 `article_image`。待文件上传统一加固时再拆分（见 `项目完成度评估与计划书.md` 阶段 1 P0）。
+> 评论插图走独立的 `POST /comment/uploadImage`（`asset_type=comment_image`），与文章插图区分。
+
+**图片上传加固**（`ImageStorageService`，头像 / 文章图 / 评论图共用）：
+> - 大小上限：头像 2MB、文章 / 评论图 5MB（`blog.upload.*` 可调）；超限 multipart 层直接 413/`-10012`
+> - 不信任客户端文件名 / Content-Type：格式由 ImageIO 从字节流嗅探
+> - 只收 jpeg / png / gif，且必须能被 ImageIO 真正解码（挡 `.svg` / `.html` / 脚本 / 畸形文件）
+> - 限制解码后像素总数（默认 6000 万）挡「解压炸弹」
+> - png / jpeg 重新编码落盘（抹掉 EXIF、polyglot 载荷）；gif 原样保留（动图）
+> - 文件名 = 雪花 ID + 规范化扩展名；`file_asset` 记服务端判定的 `mime_type` / `width` / `height`
+> - `/uploads/**` 响应带 `X-Content-Type-Options: nosniff`（Spring Security 默认）
 返回项的 `content.member`（`{id,username,avatarUrl}`）：仅「回复的回复」（`parent != root`）时出现，= 父评论作者，前端据此渲染「回复 @xxx：」。后端按 `parent_id` 现算（忽略父评论逻辑删除，删了也照常显示 @），无需前端上传。
 `editComment` body：`{ aid, cid, useMD, content:{msg} }`
 返回项结构：`{ cid, aid, authorId, title, createTime, updateTime, canEdit, useMD, content:{msg}, member:{id,username,avatarUrl}, parent, parentContent:{msg, deleted?}, root, comments:{list,total} }`
