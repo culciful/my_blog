@@ -21,7 +21,9 @@ public enum ResultCodeEnum {
     /** 评论已超过可编辑时间窗，或已有回复 */
     COMMENT_EDIT_LOCKED(-10015, "comment can no longer be edited"),
     /** 改密码时新密码与当前密码相同 */
-    PASSWORD_NOT_CHANGED(-10016, "new password must be different from the current one");
+    PASSWORD_NOT_CHANGED(-10016, "new password must be different from the current one"),
+    /** 登录失败次数过多，暂时锁定 */
+    LOGIN_LOCKED(-10017, "too many failed attempts, please try again later");
 
     private final Integer errorCode;
     private final String message;

@@ -18,11 +18,16 @@ import java.util.Collections;
  */
 public class CodeGenerator {
 
+    private static String getenv(String key, String fallback) {
+        String v = System.getenv(key);
+        return v == null || v.isBlank() ? fallback : v;
+    }
+
     public static void main(String[] args) {
-        // Adjust these values for your local environment.
-        String url = "jdbc:mysql://127.0.0.1:3306/culciful_blog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC";
-        String username = "root";
-        String password = "REDACTED";
+        // Local codegen tool: set DB_URL / DB_USERNAME / DB_PASSWORD env vars, or edit the fallbacks.
+        String url = getenv("DB_URL", "jdbc:mysql://127.0.0.1:3306/culciful_blog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC");
+        String username = getenv("DB_USERNAME", "root");
+        String password = getenv("DB_PASSWORD", "root");
 
         String projectPath = System.getProperty("user.dir");
         String outputDir = Paths.get(projectPath, "target", "generated-sources", "mp", "java").toString();

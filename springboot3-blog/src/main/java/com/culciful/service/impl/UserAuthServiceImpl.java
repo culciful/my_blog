@@ -5,10 +5,13 @@ import com.culciful.dto.LoginRequest;
 import com.culciful.mapper.UserInfoMapper;
 import com.culciful.pojo.UserInfo;
 import com.culciful.security.JwtCookieService;
+import com.culciful.security.LoginAttemptService;
 import com.culciful.service.UserAuthService;
 import com.culciful.security.token.JwtHelper;
 import com.culciful.common.api.R;
 import com.culciful.common.enums.ResultCodeEnum;
+import com.culciful.utils.RequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,13 +29,20 @@ public class UserAuthServiceImpl implements UserAuthService {
     private final JwtHelper jwtHelper;
     private final JwtCookieService jwtCookieService;
     private final PasswordEncoder passwordEncoder;
+    private final LoginAttemptService loginAttemptService;
 
     @Override
-    public R<Map<String, Object>> login(LoginRequest request, HttpServletResponse response) {
+    public R<Map<String, Object>> login(LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse response) {
+        String attemptKey = loginAttemptService.key(request.username(), RequestUtils.clientIp(httpRequest));
+        if (loginAttemptService.isBlocked(attemptKey)) {
+            return R.fail(ResultCodeEnum.LOGIN_LOCKED);
+        }
         UserInfo user = authenticate(request.username(), request.password());
         if (user == null) {
+            loginAttemptService.recordFailure(attemptKey);
             return R.fail(ResultCodeEnum.LOGIN_FAILED);
         }
+        loginAttemptService.reset(attemptKey);
         long tv = user.getTokenVersion() == null ? 0L : user.getTokenVersion();
         String jwt = jwtHelper.createToken(user.getId(), tv);
         jwtCookieService.addTokenCookie(response, jwt, jwtHelper.cookieMaxAgeSeconds());

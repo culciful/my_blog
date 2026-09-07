@@ -5,6 +5,7 @@ import com.culciful.service.UserAuthService;
 import com.culciful.security.JwtCookieService;
 import com.culciful.common.api.R;
 import com.culciful.security.crypto.EncryptedBody;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,10 @@ public class AuthController {
      * Content-Type: text/plain
      */
     @PostMapping(value = "/login", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public R<Map<String, Object>> login(@EncryptedBody @Valid LoginRequest request, HttpServletResponse response) {
-        return userAuthService.login(request, response);
+    public R<Map<String, Object>> login(@EncryptedBody @Valid LoginRequest request,
+                                        HttpServletRequest httpRequest,
+                                        HttpServletResponse response) {
+        return userAuthService.login(request, httpRequest, response);
     }
 
     @PostMapping("/logout")

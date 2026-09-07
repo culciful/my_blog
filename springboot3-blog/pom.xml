@@ -141,6 +141,12 @@
       <version>2.0.45</version>
     </dependency>
 
+    <!-- 登录失败限流：内存计数（版本由 spring-boot 父 POM 管理） -->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
   </dependencies>
 
   <!--    SpringBoot应用打包插件-->
