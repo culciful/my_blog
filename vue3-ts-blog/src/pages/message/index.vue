@@ -18,7 +18,7 @@
                                 {{item[Constant.parent]?$t('label.replyToMyComment'):$t('label.replyToMyBlog')}}
                             </span>
                         </div>
-                        <p v-if="!item[Constant.useMD]">
+                        <p v-if="!item[Constant.isMarkdown]">
                             {{item[Constant.content][Constant.msg]}}
                         </p>
                         <v-md-editor

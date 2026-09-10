@@ -39,7 +39,7 @@ const constant = {
     member: 'member',
     msg: 'msg',
     root: 'root',
-    useMD: 'useMD',
+    isMarkdown: 'isMarkdown',
     parent: 'parent',
     parentContent: 'parentContent',
     total: 'total'

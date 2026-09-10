@@ -8,7 +8,7 @@
         "authorId": 432,
         "title": "水平布局",
         "createTime": 1704034129,
-        "useMD": true,
+        "isMarkdown": true,
         "content": {
           "msg": "写的真好！"
         },
@@ -30,7 +30,7 @@
               "authorId": 432,
               "title": "水平布局",
               "createTime": 1704034129,
-              "useMD": true,
+              "isMarkdown": true,
               "content": {
                 "msg": "`const user = 1;`这样才对"
               },
@@ -76,7 +76,7 @@
         "authorId": 432,
         "title": "水平布局",
         "createTime": 1704034129,
-        "useMD": true,
+        "isMarkdown": true,
         "content": {
           "msg": "看好你！"
         },
@@ -101,7 +101,7 @@
         "authorId": 432,
         "title": "水平布局",
         "createTime": 1704034129,
-        "useMD": true,
+        "isMarkdown": true,
         "content": {
           "msg": "`const user = 1;`这样才对"
         },

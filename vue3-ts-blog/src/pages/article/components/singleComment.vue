@@ -4,7 +4,7 @@
     <div class="content-container">
         <div class="root a-pos-r">
             <p class="username a-c-p a-c-h-lighter" @click="viewUser(router, comment[Constant.member])">{{comment[Constant.member][Constant.username]}}</p>
-            <p v-if="!comment[Constant.useMD]">
+            <p v-if="!comment[Constant.isMarkdown]">
                 {{comment[Constant.content][Constant.msg]}}
             </p>
             <v-md-editor
@@ -49,7 +49,7 @@
                         ：
                     </span>
                 </p>
-                <p v-if="!child[Constant.useMD]">
+                <p v-if="!child[Constant.isMarkdown]">
                     {{child[Constant.content][Constant.msg]}}
                 </p>
                 <v-md-editor
@@ -80,14 +80,14 @@
                 </el-dropdown>
             </div>
         </div>
-        <div v-if="!expanded && childTotal > childCommentList.length"
+        <div v-if="!isExpanded && childTotal > childCommentList.length"
              class="expand-replies">
             <el-button link @click="expandChildren">
                 {{$t('label.expandReplies', { count: childTotal - childCommentList.length })}}
             </el-button>
         </div>
         <el-pagination
-            v-if="expanded"
+            v-if="isExpanded"
             v-model:current-page="currentPage"
             hide-on-single-page
             layout="total, prev, pager, next"
@@ -151,10 +151,10 @@ const pageSize = 10;
 const childTotal = ref(0);
 const currentPage = ref(1);
 const childCommentList = ref([]);
-const expanded = ref(false);
+const isExpanded = ref(false);
 // 「展开 N 条回复」：拉全量（分页），此后子回复走完整列表
 const expandChildren = () => {
-    expanded.value = true;
+    isExpanded.value = true;
     currentPage.value = 1;
     getChildComment();
 };
@@ -224,7 +224,7 @@ const reply = (comment) => {
 const finishComment = (params) => {
     showAddComment.value = false;
     if(mode.value === 'edit') {
-        newComment[Constant.useMD] = params[Constant.useMD];
+        newComment[Constant.isMarkdown] = params[Constant.isMarkdown];
         newComment[Constant.content][Constant.msg] = params[Constant.content][Constant.msg];
         newComment[Constant.updateTime] = Math.floor(Date.now() / 1000);
     } else {

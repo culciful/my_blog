@@ -117,7 +117,7 @@ const sendVeriCode = () => {
             proxy.$request.post(Constant.url.checkEmailExist, {
                 [Constant.email]: forgetPwdForm.email
             }).then(res => {
-                if(res.result[Constant.isExisted]) send();
+                if(res.result[Constant.isRegistered]) send();
             });
         }
     });

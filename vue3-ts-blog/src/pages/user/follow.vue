@@ -11,7 +11,7 @@
             <span class="a-c-h-primary a-c-p" @click="viewUser(router, item)">{{item[Constant.username]}}</span>
         </div>
         <el-button :type="item.isFollowing?'info':'primary'" @click="switchFollow(item)" plain>
-            {{item[Constant.mutual] ?
+            {{item[Constant.isMutual] ?
                 $t('label.followingEachOther'):
                 (item.isFollowing ? $t('label.following') : $t('label.follow'))}}
         </el-button>
@@ -61,11 +61,8 @@ const getData = () => {
             keyword: keyword.value
         }
     }).then(res => {
-        list.value = res.result.list.map(item => {
-            // followed = 我是否关注了 ta（后端按当前用户视角计算，关注页恒为 true）
-            item.isFollowing = item[Constant.followed];
-            return item;
-        });
+        // isFollowing = 我是否关注了 ta（后端按当前用户视角计算，关注页恒为 true）
+        list.value = res.result.list;
         total.value = res.result.total;
     });
 };
@@ -81,7 +78,7 @@ const switchFollow = (item) => {
             isQuerying.value = true;
             proxy.$request.post(Constant.url.switchFollow, {
                 [Constant.userId]: item[Constant.userId],
-                [Constant.value]: false
+                [Constant.shouldFollow]: false
             }).then(() => {
                 isQuerying.value = false;
                 item.isFollowing = false;
@@ -90,7 +87,7 @@ const switchFollow = (item) => {
     } else {
         proxy.$request.post(Constant.url.switchFollow, {
             [Constant.userId]: item[Constant.userId],
-            [Constant.value]: true
+            [Constant.shouldFollow]: true
         }).then(() => {
             isQuerying.value = false;
             item.isFollowing = true;

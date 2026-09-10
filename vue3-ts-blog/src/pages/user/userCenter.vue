@@ -13,11 +13,11 @@
         </div>
         <div class="show a-m-h-xs a-w-200">
             <router-link to="/user/following" class="a-ta-c">
-                <div class="a-font-title-1">{{state[Constant.following]}}</div>
+                <div class="a-font-title-1">{{state[Constant.followingCount]}}</div>
                 <div class="a-font-body-3">{{$t('label.follow')}}</div>
             </router-link>
             <router-link to="/user/followers" class="a-ta-c">
-                <div class="a-font-title-1">{{state[Constant.follower]}}</div>
+                <div class="a-font-title-1">{{state[Constant.followerCount]}}</div>
                 <div class="a-font-body-3">{{$t('label.followers')}}</div>
             </router-link>
             <router-link to="/user/manageContent" class="a-ta-c">
@@ -304,8 +304,8 @@ const reLogin = () => {
 };
 
 const state = reactive({
-    [Constant.following]: 0,
-    [Constant.follower]: 0,
+    [Constant.followingCount]: 0,
+    [Constant.followerCount]: 0,
     [Constant.articleCount]: 0
 });
 const getStat = () => {

@@ -2,13 +2,13 @@
 <div class="add-comment">
     <img class="avatar" :src="handleAvatar(userStore.avatarUrl)" alt="">
     <el-input
-        v-show="!useMD"
+        v-show="!isMarkdown"
         v-model="newComment"
         :rows="3"
         type="textarea"
         :placeholder="placeholder"
     />
-    <v-md-editor v-show="useMD"
+    <v-md-editor v-show="isMarkdown"
                  height="400px"
                  left-toolbar="undo redo clear | bold italic strikethrough | quote code | ul ol table | link image"
                  :disabled-menus="[]"
@@ -18,7 +18,7 @@
     <div class="a-mt-xs operation-panel">
         <div>
             <span class="a-font-body-1 a-mr-xxs">{{$t('label.openMD')}}</span>
-            <el-switch v-model="useMD" />
+            <el-switch v-model="isMarkdown" />
         </div>
         <el-button type="primary" @click="publish" :disabled="newComment.length===0">{{$t('label.publish')}}</el-button>
     </div>
@@ -59,7 +59,7 @@ const emit = defineEmits(['finish']);
 const { proxy }: any = getCurrentInstance();
 const userStore = useUserStore();
 const newComment = ref('');
-const useMD = ref(false);
+const isMarkdown = ref(false);
 const placeholder = ref('');
 
 watch(() => props.show, (val) => {
@@ -70,12 +70,12 @@ watch(() => props.show, (val) => {
             } else placeholder.value = t('inputMessage.inputComment');
         } else if(props.mode === 'edit'){
             newComment.value = props.editComment?.[Constant.content][Constant.msg];
-            useMD.value = !!props.editComment?.[Constant.useMD];
+            isMarkdown.value = !!props.editComment?.[Constant.isMarkdown];
             placeholder.value = props.editComment?.[Constant.content][Constant.msg];
         }
     } else {
         newComment.value = '';
-        useMD.value = false;
+        isMarkdown.value = false;
     }
 });
 
@@ -103,7 +103,7 @@ const publish = () => {
             [Constant.articleId]: props.articleId,
             [Constant.authorId]: props.authorId,
             [Constant.createTime]: (new Date().getTime() / 1000).toFixed(),
-            [Constant.useMD]: useMD.value,
+            [Constant.isMarkdown]: isMarkdown.value,
             [Constant.content]: {
                 [Constant.msg]: newComment.value,
                 [Constant.member]: {}
@@ -123,13 +123,13 @@ const publish = () => {
             emit('finish', params);
             // 发布后重置编辑区，并切回非 markdown 模式
             newComment.value = '';
-            useMD.value = false;
+            isMarkdown.value = false;
         });
     } else {
         if (!props.editComment) return;
         params = deepCopy(props.editComment);
         params[Constant.createTime] = (new Date().getTime() / 1000).toFixed();
-        params[Constant.useMD] = useMD.value;
+        params[Constant.isMarkdown] = isMarkdown.value;
         params[Constant.content][Constant.msg] = newComment.value;
         params[Constant.articleId] = props.articleId;
         params[Constant.commentId] = props.editComment[Constant.commentId];

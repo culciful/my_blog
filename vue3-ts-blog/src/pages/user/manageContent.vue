@@ -176,14 +176,14 @@ const isFollowing = ref(false);
 const isQuerying = ref(false);
 const checkFollow = () => {
     proxy.$request.get(Constant.url.checkHasFollow, { [Constant.userId]: userInfo[Constant.userId] }).then(res => {
-        isFollowing.value = res.result.data;
+        isFollowing.value = res.result.isFollowing;
     });
 };
 const switchFollow = () => {
     isQuerying.value = true;
     proxy.$request.post(Constant.url.switchFollow, {
         [Constant.userId]: userInfo[Constant.userId],
-        [Constant.value]: !isFollowing.value
+        [Constant.shouldFollow]: !isFollowing.value
     }).then(res => {
         isFollowing.value = !isFollowing.value;
         isQuerying.value = false;

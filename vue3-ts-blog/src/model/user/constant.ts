@@ -67,13 +67,13 @@ const constant = {
     verificationCode: 'verificationCode',
     scene: 'scene',
     checkExist: 'checkExist',
-    value: 'value',
+    shouldFollow: 'shouldFollow',
     articleCount: 'articleCount',
-    following: 'following',
-    follower: 'follower',
-    mutual: 'mutual',
-    followed: 'followed',
-    isExisted: 'isExisted'
+    followingCount: 'followingCount',
+    followerCount: 'followerCount',
+    isFollowing: 'isFollowing',
+    isMutual: 'isMutual',
+    isRegistered: 'isRegistered'
 };
 
 export const defaultPackage = {

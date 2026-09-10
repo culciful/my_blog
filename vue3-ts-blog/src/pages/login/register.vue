@@ -99,7 +99,7 @@ const sendVeriCode = () => {
             proxy.$request.post(Constant.url.checkEmailExist, {
                 [Constant.email]: registerForm.email
             }).then(res => {
-                if(res.result[Constant.isExisted]) {
+                if(res.result[Constant.isRegistered]) {
                     ElMessage.error(t('infoMessage.emailExisted'));
                 }
                 else send();

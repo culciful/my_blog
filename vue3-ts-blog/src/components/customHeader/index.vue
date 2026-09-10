@@ -16,7 +16,7 @@
                     <svg-icon v-else @click="openSearchDialog" :size="24" class="a-m-h-xs" name="search"></svg-icon>
                 </template>
 
-                <el-dialog v-model="searchDialogVisible"
+                <el-dialog v-model="isSearchDialogVisible"
                            width="100%"
                            top="0"
                            :show-close="false"
@@ -118,7 +118,7 @@ const router = useRouter();
 const userStore = useUserStore();
 const searchInputRef = ref();
 const {screenWidth} = storeToRefs(useWindowStore());
-const searchDialogVisible = ref(false);
+const isSearchDialogVisible = ref(false);
 const showSearchInput = computed(() => screenWidth.value > 520);
 
 const keyword = ref('');
@@ -129,7 +129,7 @@ const changeKeyword = () => {
     }
 };
 function openSearchDialog() {
-    searchDialogVisible.value = true;
+    isSearchDialogVisible.value = true;
     setTimeout(() => {
         searchInputRef.value.focus();
     }, 100);
