@@ -3,6 +3,7 @@ package com.culciful.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record CommentRequest(
         Long id,
@@ -28,6 +29,7 @@ public record CommentRequest(
 ) {
     public record Content(
             @NotBlank
+            @Size(max = 10_000)
             String msg
     ) {}
 

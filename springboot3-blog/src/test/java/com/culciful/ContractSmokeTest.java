@@ -65,6 +65,16 @@ class ContractSmokeTest {
     }
 
     @Test
+    void oversizedRequestBodyRejected() throws Exception {
+        String huge = "{\"filter\":\"" + "a".repeat(2 * 1024 * 1024) + "\"}";
+        mockMvc.perform(post("/article/getArticleList")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(huge))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.errorCode").value(-10012));
+    }
+
+    @Test
     void updateUserInfoRequiresAuthentication() throws Exception {
         mockMvc.perform(post("/user/updateUserInfo")
                         .contentType(MediaType.APPLICATION_JSON)

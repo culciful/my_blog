@@ -17,6 +17,7 @@ public record ArticleRequest(
         String title,
 
         @NotBlank
+        @Size(max = 100_000)
         String content,
 
         Long createTime,
