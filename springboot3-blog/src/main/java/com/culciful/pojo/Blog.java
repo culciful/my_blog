@@ -53,6 +53,13 @@ public class Blog {
     private Boolean isCustomAbstract;
 
     /**
+     * 发布状态：{@code draft} 草稿（仅作者可见，不进公开列表/详情、不计入 article_count）/
+     * {@code published} 已发布。
+     */
+    @TableField("status")
+    private String status;
+
+    /**
      * Content text_body.id
      */
     @TableField("content_text_id")

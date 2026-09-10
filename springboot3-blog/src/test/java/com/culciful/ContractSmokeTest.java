@@ -114,6 +114,23 @@ class ContractSmokeTest {
     }
 
     @Test
+    void draftEndpointsRequireAuthentication() throws Exception {
+        mockMvc.perform(post("/article/saveDraft")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"draft\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+        mockMvc.perform(post("/article/getDraftList")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"pageSize\":10,\"currentPage\":1}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+        mockMvc.perform(get("/article/getDraft").param("aid", "1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
     void commentInboxRequiresAuthentication() throws Exception {
         mockMvc.perform(post("/comment/getCommentInbox")
                         .contentType(MediaType.APPLICATION_JSON)

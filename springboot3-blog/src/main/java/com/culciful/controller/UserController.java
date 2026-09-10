@@ -448,8 +448,7 @@ public class UserController {
     }
 
     private Map<String, Object> followPageResult(Long selfId, boolean isFollowingList, PageSearchRequest request) {
-        Object keyword = request.safeFilter().get("keyword");
-        String keywordTrimmed = keyword == null ? "" : keyword.toString().trim();
+        String keywordTrimmed = request.safeKeyword();
         LambdaQueryWrapper<UserFollow> wrapper = new LambdaQueryWrapper<UserFollow>()
                 .eq(isFollowingList ? UserFollow::getFollowerId : UserFollow::getFollowingId, selfId)
                 .orderByDesc(UserFollow::getCreatedAt);

@@ -64,6 +64,9 @@ public class ArticleController {
     private final SnowflakeIdGenerator snowflakeIdGenerator;
     private final ImageStorageService imageStorageService;
 
+    private static final String STATUS_DRAFT = "draft";
+    private static final String STATUS_PUBLISHED = "published";
+
     @GetMapping("/getTags")
     public R<Map<String, Object>> getTags() {
         List<String> list = blogTagMapper.selectList(new LambdaQueryWrapper<BlogTag>().orderByAsc(BlogTag::getTag))
@@ -77,9 +80,10 @@ public class ArticleController {
     public R<Map<String, Object>> getArticleList(@RequestBody @Valid PageSearchRequest request) {
         LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<Blog>()
                 .eq(Blog::getIsDeleted, false)
+                .eq(Blog::getStatus, STATUS_PUBLISHED)
                 .orderByDesc(Blog::getCreatedAt);
         Map<String, Object> filter = request.safeFilter();
-        String keyword = asString(filter.get("keyword"));
+        String keyword = request.safeKeyword();
         if (!keyword.isEmpty()) {
             wrapper.and(w -> w.like(Blog::getTitle, keyword).or().like(Blog::getAbstractText, keyword));
         }
@@ -108,7 +112,8 @@ public class ArticleController {
     public R<Map<String, Object>> getArticleInfo(@RequestParam("aid") String aidParam) {
         Long aid = asLong(aidParam);
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
-        if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted())) {
+        if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted()) || !STATUS_PUBLISHED.equals(blog.getStatus())) {
+            // 草稿对所有人（含作者）走 getArticleInfo 都是 404；作者编辑草稿走 getDraft
             return R.fail(ResultCodeEnum.NOT_FOUND);
         }
         // 显式保留 updated_at，避免浏览量自增触发 ON UPDATE CURRENT_TIMESTAMP，
@@ -143,6 +148,7 @@ public class ArticleController {
         blog.setCreatedAt(LocalDateTime.now());
         blog.setUpdatedAt(LocalDateTime.now());
         blog.setIsDeleted(false);
+        blog.setStatus(STATUS_PUBLISHED);
         blogMapper.insert(blog);
         replaceTags(blogId, request.tags());
         userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
@@ -178,9 +184,135 @@ public class ArticleController {
         applyAbstract(blog, request);
         blog.setPackageId(request.pid() == null || request.pid() == 0 ? null : request.pid());
         blog.setUpdatedAt(LocalDateTime.now());
+        boolean promotingDraft = STATUS_DRAFT.equals(blog.getStatus());
+        if (promotingDraft) {
+            // 草稿 → 发布：状态翻转，发布时间取现在，作者文章数 +1
+            blog.setStatus(STATUS_PUBLISHED);
+            blog.setCreatedAt(LocalDateTime.now());
+        }
         blogMapper.updateById(blog);
         replaceTags(aid, request.tags());
+        if (promotingDraft) {
+            userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
+                    .setSql("article_count = article_count + 1")
+                    .eq(UserInfo::getId, selfId));
+        }
         return R.ok(Map.of("id", aid));
+    }
+
+    /**
+     * 保存草稿：新建（无 aid）或更新自己的草稿（aid 指向自己的草稿行）。
+     * 校验放松 —— 只要求标题非空，其余字段（正文/分组/标签/摘要）都可空，方便随手存。
+     * 不动 article_count（草稿不算已发布文章）。
+     */
+    @PostMapping("/saveDraft")
+    @Transactional
+    public R<Map<String, Long>> saveDraft(@RequestBody ArticleRequest request) {
+        Long selfId = currentUserId();
+        if (selfId == null) {
+            return R.fail(ResultCodeEnum.NOT_LOGIN);
+        }
+        if (request == null || isBlank(request.title())
+                || request.title().length() > 64
+                || (request.content() != null && request.content().length() > 100_000)
+                || (request.abstractText() != null && request.abstractText().length() > 200)) {
+            return R.fail(ResultCodeEnum.PARAM_ERROR);
+        }
+        String content = request.content() == null ? "" : request.content();
+        Long pkg = request.pid() == null || request.pid() == 0 ? null : request.pid();
+
+        if (request.aid() != null) {
+            Blog draft = blogMapper.selectById(request.aid());
+            if (draft == null || Boolean.TRUE.equals(draft.getIsDeleted()) || !STATUS_DRAFT.equals(draft.getStatus())) {
+                return R.fail(ResultCodeEnum.NOT_FOUND);
+            }
+            if (!draft.getUserId().equals(selfId)) {
+                return R.fail(ResultCodeEnum.FORBIDDEN);
+            }
+            TextBody text = new TextBody();
+            text.setId(draft.getContentTextId());
+            text.setBody(content);
+            text.setContentHash(sha256(content));
+            textBodyMapper.updateById(text);
+            draft.setTitle(request.title());
+            applyAbstract(draft, request);
+            draft.setPackageId(pkg);
+            draft.setUpdatedAt(LocalDateTime.now());
+            blogMapper.updateById(draft);
+            replaceTags(draft.getId(), request.tags());
+            return R.ok(Map.of("id", draft.getId()));
+        }
+
+        long textId = insertText(content);
+        long blogId = snowflakeIdGenerator.nextId();
+        Blog blog = new Blog();
+        blog.setId(blogId);
+        blog.setUserId(selfId);
+        blog.setTitle(request.title());
+        applyAbstract(blog, request);
+        blog.setContentTextId(textId);
+        blog.setViewCount(0);
+        blog.setCommentCount(0);
+        blog.setPackageId(pkg);
+        blog.setCreatedAt(LocalDateTime.now());
+        blog.setUpdatedAt(LocalDateTime.now());
+        blog.setIsDeleted(false);
+        blog.setStatus(STATUS_DRAFT);
+        blogMapper.insert(blog);
+        replaceTags(blogId, request.tags());
+        return R.ok(Map.of("id", blogId));
+    }
+
+    /** 当前登录用户的草稿列表（按最后修改倒序）。 */
+    @PostMapping("/getDraftList")
+    public R<Map<String, Object>> getDraftList(@RequestBody @Valid PageSearchRequest request) {
+        Long selfId = currentUserId();
+        if (selfId == null) {
+            return R.fail(ResultCodeEnum.NOT_LOGIN);
+        }
+        LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<Blog>()
+                .eq(Blog::getIsDeleted, false)
+                .eq(Blog::getStatus, STATUS_DRAFT)
+                .eq(Blog::getUserId, selfId)
+                .orderByDesc(Blog::getUpdatedAt);
+        String keyword = request.safeKeyword();
+        if (!keyword.isEmpty()) {
+            wrapper.and(w -> w.like(Blog::getTitle, keyword).or().like(Blog::getAbstractText, keyword));
+        }
+        Page<Blog> page = blogMapper.selectPage(new Page<>(request.safeCurrentPage(), request.safePageSize()), wrapper);
+        // 复用 articleListItem：前端草稿列表和文章列表同一个组件，字段形状要一致
+        // （草稿的 viewCount/commentCount 库里就是 0，直接显示 0；createTime 取创建时间）
+        List<Map<String, Object>> list = page.getRecords().stream().map(this::articleListItem).toList();
+        return R.ok(Map.of("list", list, "total", page.getTotal()));
+    }
+
+    /** 取自己某篇草稿的完整内容供编辑页回填；非本人或非草稿 → 404。不自增浏览量。 */
+    @GetMapping("/getDraft")
+    public R<Map<String, Object>> getDraft(@RequestParam("aid") String aidParam) {
+        Long selfId = currentUserId();
+        if (selfId == null) {
+            return R.fail(ResultCodeEnum.NOT_LOGIN);
+        }
+        Long aid = asLong(aidParam);
+        Blog blog = aid == null ? null : blogMapper.selectById(aid);
+        if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted()) || !STATUS_DRAFT.equals(blog.getStatus())) {
+            return R.fail(ResultCodeEnum.NOT_FOUND);
+        }
+        if (!blog.getUserId().equals(selfId)) {
+            return R.fail(ResultCodeEnum.FORBIDDEN);
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("aid", blog.getId());
+        m.put("title", blog.getTitle());
+        TextBody text = textBodyMapper.selectById(blog.getContentTextId());
+        m.put("content", text == null ? "" : text.getBody());
+        m.put("abstract", blog.getAbstractText());
+        m.put("isCustomAbstract", Boolean.TRUE.equals(blog.getIsCustomAbstract()));
+        m.put("pid", blog.getPackageId());
+        m.put("package", articlePackage(blog.getPackageId()));
+        m.put("tags", tagsByBlog(blog.getId()));
+        m.put("updateTime", toEpochSeconds(blog.getUpdatedAt()));
+        return R.ok(m);
     }
 
     @PostMapping("/deleteArticle")
@@ -201,9 +333,12 @@ public class ArticleController {
                 .set(Blog::getIsDeleted, true)
                 .set(Blog::getUpdatedAt, LocalDateTime.now())
                 .eq(Blog::getId, aid));
-        userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
-                .setSql("article_count = greatest(article_count - 1, 0)")
-                .eq(UserInfo::getId, selfId));
+        if (STATUS_PUBLISHED.equals(blog.getStatus())) {
+            // 草稿不计入 article_count，删草稿不用减
+            userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
+                    .setSql("article_count = greatest(article_count - 1, 0)")
+                    .eq(UserInfo::getId, selfId));
+        }
         return R.ok(null);
     }
 
