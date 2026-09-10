@@ -6,5 +6,19 @@ jwt:
 
 blog:
   cors:
-    allowed-origins:
-      - ${BLOG_PUBLIC_ORIGIN:https://blog.example.com}
+    # 同站部署（SPA 与 API 同源）：不注入 BLOG_PUBLIC_ORIGIN，留空 → 完全不启用 CORS。
+    # 跨站部署：BLOG_PUBLIC_ORIGIN=https://app.example.com（多个域名用逗号分隔）。
+    allowed-origins: ${BLOG_PUBLIC_ORIGIN:}
+    # allowed-headers / allowed-methods 默认已是 [Content-Type] / [GET,POST,OPTIONS]（见 BlogCorsProperties），
+    # 前端加了自定义请求头或用到别的方法时才需要在这里覆盖：
+    # allowed-headers: Content-Type,X-Trace-Id
+
+# 邮件发送：不在此写死凭据，用环境变量注入（Spring Boot relaxed binding）：
+#   SPRING_MAIL_HOST=smtp.example.com
+#   SPRING_MAIL_PORT=587
+#   SPRING_MAIL_USERNAME=...
+#   SPRING_MAIL_PASSWORD=...
+#   SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+#   SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+#   BLOG_EMAIL_CODE_FROM=no-reply@yourdomain.com
+# 不设 SPRING_MAIL_HOST 时不创建 JavaMailSender，验证码降级为打日志（不会崩）。

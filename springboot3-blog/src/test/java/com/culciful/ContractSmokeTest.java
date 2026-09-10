@@ -8,7 +8,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -118,6 +120,36 @@ class ContractSmokeTest {
                         .content("{\"pageSize\":10,\"currentPage\":1}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    // dev profile 的 blog.cors.allowed-origins 含 http://localhost:5173（application-dev.yaml）
+
+    @Test
+    void corsPreflightAllowsConfiguredOriginAndContentType() throws Exception {
+        mockMvc.perform(options("/article/getArticleList")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    }
+
+    @Test
+    void corsPreflightRejectsUnlistedHeader() throws Exception {
+        mockMvc.perform(options("/article/getArticleList")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "X-Evil"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void corsRejectsUnlistedOrigin() throws Exception {
+        mockMvc.perform(options("/article/getArticleList")
+                        .header("Origin", "https://evil.example.com")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

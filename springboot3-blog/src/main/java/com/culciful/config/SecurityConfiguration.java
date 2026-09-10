@@ -18,8 +18,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
-
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -53,7 +51,7 @@ public class SecurityConfiguration {
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        if (!blogCorsProperties.getAllowedOrigins().isEmpty()) {
+        if (!blogCorsProperties.resolvedAllowedOrigins().isEmpty()) {
             http.cors(c -> c.configurationSource(corsConfigurationSource()));
         }
 
@@ -67,9 +65,9 @@ public class SecurityConfiguration {
 
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(blogCorsProperties.getAllowedOrigins());
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedOrigins(blogCorsProperties.resolvedAllowedOrigins());
+        config.setAllowedMethods(blogCorsProperties.getAllowedMethods());
+        config.setAllowedHeaders(blogCorsProperties.getAllowedHeaders());
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
