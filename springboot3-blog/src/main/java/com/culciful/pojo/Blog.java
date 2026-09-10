@@ -40,10 +40,17 @@ public class Blog {
     private String title;
 
     /**
-     * Summary
+     * 列表展示摘要（对外 JSON key = "abstract"；Java 里 abstract 是关键字所以字段叫 abstractText）。
+     * 作者自填时 = 其原文（剥 markdown + 截 200）；未自填时从正文自动生成。
      */
-    @TableField("overview")
-    private String overview;
+    @TableField("abstract")
+    private String abstractText;
+
+    /**
+     * abstract 是否作者自填。true：编辑页回填输入框、改正文不重算；false：从正文自动生成
+     */
+    @TableField("is_custom_abstract")
+    private Boolean isCustomAbstract;
 
     /**
      * Content text_body.id

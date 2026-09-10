@@ -23,6 +23,7 @@ import com.culciful.pojo.TextBody;
 import com.culciful.pojo.UserInfo;
 import com.culciful.pojo.UserPackage;
 import com.culciful.service.ImageStorageService;
+import com.culciful.utils.ArticleAbstract;
 import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +65,7 @@ public class ArticleController {
     private final ImageStorageService imageStorageService;
 
     @GetMapping("/getTags")
-    public R<Map<String, Object>> tags() {
+    public R<Map<String, Object>> getTags() {
         List<String> list = blogTagMapper.selectList(new LambdaQueryWrapper<BlogTag>().orderByAsc(BlogTag::getTag))
                 .stream()
                 .map(BlogTag::getTag)
@@ -73,24 +74,24 @@ public class ArticleController {
     }
 
     @PostMapping("/getArticleList")
-    public R<Map<String, Object>> search(@RequestBody @Valid PageSearchRequest request) {
+    public R<Map<String, Object>> getArticleList(@RequestBody @Valid PageSearchRequest request) {
         LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<Blog>()
                 .eq(Blog::getIsDeleted, false)
                 .orderByDesc(Blog::getCreatedAt);
         Map<String, Object> filter = request.safeFilter();
-        String keyword = stringFilter(filter.get("keyword"));
+        String keyword = asString(filter.get("keyword"));
         if (!keyword.isEmpty()) {
-            wrapper.and(w -> w.like(Blog::getTitle, keyword).or().like(Blog::getOverview, keyword));
+            wrapper.and(w -> w.like(Blog::getTitle, keyword).or().like(Blog::getAbstractText, keyword));
         }
-        Long userId = longFilter(filter.get("id"));
+        Long userId = asLong(filter.get("id"));
         if (userId != null) {
             wrapper.eq(Blog::getUserId, userId);
         }
-        Long packageId = longFilter(filter.get("pid"));
+        Long packageId = asLong(filter.get("pid"));
         if (packageId != null && packageId > 0) {
             wrapper.eq(Blog::getPackageId, packageId);
         }
-        String tag = stringFilter(filter.get("tag"));
+        String tag = asString(filter.get("tag"));
         if (!tag.isEmpty()) {
             Set<Long> blogIds = blogIdsByTag(tag);
             if (blogIds.isEmpty()) {
@@ -104,8 +105,8 @@ public class ArticleController {
     }
 
     @GetMapping("/getArticleInfo")
-    public R<Map<String, Object>> detail(@RequestParam("aid") String aidParam) {
-        Long aid = longFilter(aidParam);
+    public R<Map<String, Object>> getArticleInfo(@RequestParam("aid") String aidParam) {
+        Long aid = asLong(aidParam);
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
         if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted())) {
             return R.fail(ResultCodeEnum.NOT_FOUND);
@@ -120,7 +121,7 @@ public class ArticleController {
 
     @PostMapping("/addArticle")
     @Transactional
-    public R<Map<String, Long>> add(@RequestBody @Valid ArticleRequest request) {
+    public R<Map<String, Long>> addArticle(@RequestBody @Valid ArticleRequest request) {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -134,7 +135,7 @@ public class ArticleController {
         blog.setId(blogId);
         blog.setUserId(selfId);
         blog.setTitle(request.title());
-        blog.setOverview(overview(request.content()));
+        applyAbstract(blog, request);
         blog.setContentTextId(textId);
         blog.setViewCount(0);
         blog.setCommentCount(0);
@@ -152,7 +153,7 @@ public class ArticleController {
 
     @PostMapping("/editArticle")
     @Transactional
-    public R<Map<String, Long>> edit(@RequestBody @Valid ArticleRequest request) {
+    public R<Map<String, Long>> editArticle(@RequestBody @Valid ArticleRequest request) {
         Long selfId = currentUserId();
         Long aid = request.aid();
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
@@ -174,7 +175,7 @@ public class ArticleController {
         text.setContentHash(sha256(request.content()));
         textBodyMapper.updateById(text);
         blog.setTitle(request.title());
-        blog.setOverview(overview(request.content()));
+        applyAbstract(blog, request);
         blog.setPackageId(request.pid() == null || request.pid() == 0 ? null : request.pid());
         blog.setUpdatedAt(LocalDateTime.now());
         blogMapper.updateById(blog);
@@ -183,7 +184,7 @@ public class ArticleController {
     }
 
     @PostMapping("/deleteArticle")
-    public R<Void> delete(@RequestBody @Valid ArticleRefRequest request) {
+    public R<Void> deleteArticle(@RequestBody @Valid ArticleRefRequest request) {
         Long selfId = currentUserId();
         Long aid = request.aid();
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
@@ -220,20 +221,21 @@ public class ArticleController {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("aid", blog.getId());
         m.put("id", blog.getUserId());
-        m.put("member", member(blog.getUserId()));
+        m.put("member", memberCard(blog.getUserId()));
         m.put("title", blog.getTitle());
-        m.put("createTime", epoch(blog.getCreatedAt()));
+        m.put("createTime", toEpochSeconds(blog.getCreatedAt()));
         m.put("viewCount", blog.getViewCount() == null ? 0 : blog.getViewCount());
         m.put("commentCount", blog.getCommentCount() == null ? 0 : blog.getCommentCount());
-        m.put("abstract", blog.getOverview());
+        m.put("abstract", blog.getAbstractText());
         return m;
     }
 
     private Map<String, Object> articleDetail(Blog blog) {
         Map<String, Object> m = articleListItem(blog);
-        m.put("updateTime", epoch(blog.getUpdatedAt()));
+        m.put("updateTime", toEpochSeconds(blog.getUpdatedAt()));
         TextBody text = textBodyMapper.selectById(blog.getContentTextId());
         m.put("content", text == null ? "" : text.getBody());
+        m.put("isCustomAbstract", Boolean.TRUE.equals(blog.getIsCustomAbstract()));
         m.put("pid", blog.getPackageId());
         m.put("package", articlePackage(blog.getPackageId()));
         m.put("tags", tagsByBlog(blog.getId()));
@@ -252,7 +254,7 @@ public class ArticleController {
         return Map.of("pid", userPackage.getId(), "pname", userPackage.getPackName());
     }
 
-    private Map<String, Object> member(Long userId) {
+    private Map<String, Object> memberCard(Long userId) {
         UserInfo user = userInfoMapper.selectById(userId);
         if (user == null) {
             return Map.of("id", userId);
@@ -270,7 +272,7 @@ public class ArticleController {
             return;
         }
         for (String raw : tags) {
-            String tag = stringFilter(raw);
+            String tag = asString(raw);
             if (tag.isEmpty()) {
                 continue;
             }
@@ -343,17 +345,22 @@ public class ArticleController {
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             return null;
         }
-        return longFilter(auth.getName());
+        return asLong(auth.getName());
     }
 
-    private long epoch(LocalDateTime time) {
+    private long toEpochSeconds(LocalDateTime time) {
         // 存储用系统时区（LocalDateTime.now()），按同一时区换算成绝对时间戳，前端再按浏览器时区显示
         return time == null ? 0L : time.atZone(ZoneId.systemDefault()).toEpochSecond();
     }
 
-    private String overview(String content) {
-        String text = content == null ? "" : content.replaceAll("\\s+", " ").trim();
-        return text.length() <= 120 ? text : text.substring(0, 120);
+    /** 请求里提交了摘要就用它（标记 custom），没提交就从正文自动生成 */
+    private void applyAbstract(Blog blog, ArticleRequest request) {
+        String abstractText = request.abstractText();
+        boolean isCustom = abstractText != null && !abstractText.isBlank();
+        blog.setIsCustomAbstract(isCustom);
+        blog.setAbstractText(isCustom
+                ? ArticleAbstract.fromAuthor(abstractText)
+                : ArticleAbstract.auto(request.content()));
     }
 
     private String sha256(String body) {
@@ -364,11 +371,11 @@ public class ArticleController {
         }
     }
 
-    private static String stringFilter(Object raw) {
+    private static String asString(Object raw) {
         return raw == null ? "" : raw.toString().trim();
     }
 
-    private static Long longFilter(Object raw) {
+    private static Long asLong(Object raw) {
         if (raw == null || raw.toString().isBlank()) {
             return null;
         }

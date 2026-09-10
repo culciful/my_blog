@@ -1,5 +1,6 @@
 package com.culciful.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -19,6 +20,11 @@ public record ArticleRequest(
         @NotBlank
         @Size(max = 100_000)
         String content,
+
+        /** 作者自填摘要，选填；为空则从正文自动生成。JSON key = "abstract"（Java 关键字冲突） */
+        @JsonProperty("abstract")
+        @Size(max = 200)
+        String abstractText,
 
         Long createTime,
 
