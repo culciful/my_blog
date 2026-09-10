@@ -8,23 +8,19 @@ public final class RequestUtils {
     }
 
     /**
-     * 客户端 IP。优先取反向代理头（部署在 Nginx 后面时），否则用直连地址。
-     * 注意：这些头可被客户端伪造，只用于限流这类"尽力而为"的场景。
+     * 客户端 IP，用于限流。
+     *
+     * <p>只取 {@code getRemoteAddr()}（直连对端），<b>不解析 X-Forwarded-For / X-Real-IP</b> ——
+     * 那些头可被客户端随意伪造，直接信任等于让「按 IP 限流」形同虚设。
+     * 部署在 Nginx 等反代后面时，配置 {@code server.forward-headers-strategy=framework}
+     * （或 {@code native}），Spring / 容器会校验并处理这些头，{@code getRemoteAddr()}
+     * 返回的就是真实客户端 IP。</p>
      */
     public static String clientIp(HttpServletRequest request) {
         if (request == null) {
             return "";
         }
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            int comma = forwardedFor.indexOf(',');
-            String first = comma > 0 ? forwardedFor.substring(0, comma) : forwardedFor;
-            return first.trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
+        String remote = request.getRemoteAddr();
+        return remote == null ? "" : remote;
     }
 }

@@ -104,15 +104,25 @@ public class ImageStorageService {
             throw new IllegalArgumentException("image exceeds size limit: " + maxBytes + " bytes");
         }
 
-        Decoded decoded = decode(bytes);
-        if (decoded == null) {
+        // 1. 只读 header：拿真实格式 + 声明的尺寸（不分配栅格）
+        Header header = readHeader(bytes);
+        if (header == null) {
             throw new IllegalArgumentException("not a decodable image");
         }
-        String format = decoded.format();
+        String format = header.format();
         if (!ALLOWED.contains(format)) {
             throw new IllegalArgumentException("unsupported image type: " + format);
         }
-        BufferedImage image = decoded.image();
+        // 2. 解压炸弹防护：在真正解码分配像素之前挡掉
+        if (header.pixels() > properties.getMaxPixels()) {
+            throw new IllegalArgumentException("image dimensions too large");
+        }
+
+        // 3. 现在才真正解码
+        BufferedImage image = decodePixels(bytes);
+        if (image == null) {
+            throw new IllegalArgumentException("cannot decode image");
+        }
         if ((long) image.getWidth() * image.getHeight() > properties.getMaxPixels()) {
             throw new IllegalArgumentException("image dimensions too large");
         }
@@ -156,11 +166,11 @@ public class ImageStorageService {
         return asset;
     }
 
-    private record Decoded(String format, BufferedImage image) {
+    private record Header(String format, long pixels) {
     }
 
-    /** 一次读取拿到「真实格式 + 解码后的栅格」，两者缺一即视为非法图片 */
-    private static Decoded decode(byte[] bytes) {
+    /** 只读图像 header：真实格式 + 宽高（不解码像素，避免解压炸弹）。非法图片返回 null。 */
+    private static Header readHeader(byte[] bytes) {
         try (ImageInputStream iis = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             if (iis == null) {
                 return null;
@@ -173,8 +183,30 @@ public class ImageStorageService {
             try {
                 reader.setInput(iis, true, true);
                 String format = reader.getFormatName().toLowerCase(Locale.ROOT);
-                BufferedImage image = reader.read(0);
-                return image == null ? null : new Decoded(format, image);
+                long pixels = (long) reader.getWidth(0) * reader.getHeight(0);
+                return new Header(format, pixels);
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** 真正解码成栅格。仅在 header 尺寸校验通过后调用。 */
+    private static BufferedImage decodePixels(byte[] bytes) {
+        try (ImageInputStream iis = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            if (iis == null) {
+                return null;
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+            if (!readers.hasNext()) {
+                return null;
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(iis, true, true);
+                return reader.read(0);
             } finally {
                 reader.dispose();
             }

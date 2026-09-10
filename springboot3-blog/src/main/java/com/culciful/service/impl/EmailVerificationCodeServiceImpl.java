@@ -127,8 +127,12 @@ public class EmailVerificationCodeServiceImpl implements EmailVerificationCodeSe
             return false;
         }
         if (consume) {
-            entity.setUsedAt(LocalDateTime.now());
-            emailVerificationCodeMapper.updateById(entity);
+            // 条件更新 + 行数校验：并发下同一验证码只能被消费一次
+            int updated = emailVerificationCodeMapper.update(null, new LambdaUpdateWrapper<EmailVerificationCode>()
+                    .set(EmailVerificationCode::getUsedAt, LocalDateTime.now())
+                    .eq(EmailVerificationCode::getId, entity.getId())
+                    .isNull(EmailVerificationCode::getUsedAt));
+            return updated == 1;
         }
         return true;
     }

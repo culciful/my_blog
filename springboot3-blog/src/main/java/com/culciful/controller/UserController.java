@@ -522,8 +522,18 @@ public class UserController {
         throw new IllegalArgumentException("file is required");
     }
 
+    /** 空 → register；否则必须是三个已知场景之一，未知场景直接拒（防日志注入 / 借服务器给任意邮箱发信） */
     private String sceneOrDefault(String scene) {
-        return isBlank(scene) ? EmailVerificationCodeService.SCENE_REGISTER : scene;
+        if (isBlank(scene)) {
+            return EmailVerificationCodeService.SCENE_REGISTER;
+        }
+        String s = scene.trim();
+        if (EmailVerificationCodeService.SCENE_REGISTER.equals(s)
+                || EmailVerificationCodeService.SCENE_RESET_PASSWORD.equals(s)
+                || EmailVerificationCodeService.SCENE_UPDATE_EMAIL.equals(s)) {
+            return s;
+        }
+        throw new IllegalArgumentException("unknown scene: " + s);
     }
 
     private static boolean isBlank(String s) {
