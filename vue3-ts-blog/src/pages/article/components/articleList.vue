@@ -15,7 +15,7 @@
                         </template>
                     </el-dropdown>
                 </h3>
-                <p @click="viewArticle(item[ArticleConstant.articleId])" class="a-font-body-1 a-c-p a-m-v-xs">{{item[ArticleConstant.abstract] + ' ...'}}</p>
+                <p v-if="item[ArticleConstant.abstract]" @click="viewArticle(item[ArticleConstant.articleId])" class="a-font-body-1 a-c-p a-m-v-xs">{{item[ArticleConstant.abstract]}}</p>
                 <footer class="inline-container">
                     <span class="clickable" @click="viewUser(router, item[ArticleConstant.author])">{{$t('label.author')+': '+item[ArticleConstant.author][ArticleConstant.username]}}</span>
                     <span class="create-time">{{transferTimestamp(item[ArticleConstant.createTime])}}</span>

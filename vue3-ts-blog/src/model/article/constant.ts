@@ -34,6 +34,7 @@ const constant = {
     viewCount: 'viewCount',
     commentCount: 'commentCount',
     abstract: 'abstract',
+    isCustomAbstract: 'isCustomAbstract',
     content: 'content',
     package: 'package',
     tags: 'tags',

@@ -44,6 +44,15 @@
                     </el-select>
                     <span class="a-ml-xs a-font-body-2">{{$t('inputMessage.enterToCreate')}}</span>
                 </el-form-item>
+                <el-form-item :label="$t('label.abstract')" prop="abstract">
+                    <el-input
+                        v-model="form.abstract"
+                        type="textarea"
+                        :autosize="{ minRows: 1, maxRows: 3 }"
+                        maxlength="200"
+                        show-word-limit
+                        :placeholder="$t('inputMessage.abstractHint')" />
+                </el-form-item>
                 <el-form-item :label="$t('label.mainBody')" prop="content" class="form-item-content">
                     <v-md-editor left-toolbar="undo redo clear | h emoji bold italic strikethrough quote | ul ol table todo-list hr | link image code tip"
                                  :placeholder="$t('inputMessage.useMarkdown')"
@@ -76,6 +85,7 @@ const props = defineProps({
 
 interface ArticleForm {
     title: string,
+    abstract: string,
     content: string,
     package: number,
     tags: []
@@ -87,6 +97,7 @@ const { t } = i18n.global as any;
 const formRef = ref<FormInstance>();
 const form = reactive<ArticleForm>({
     title: '',
+    abstract: '',
     content: '',
     package: 0,
     tags: []
@@ -119,6 +130,7 @@ const onSubmit =  (formEl: FormInstance | undefined) => {
             const payload = {
                 [ArticleConstant.userId]: userStore.id,
                 [ArticleConstant.title]: form.title,
+                [ArticleConstant.abstract]: form.abstract,
                 [ArticleConstant.content]: form.content,
                 [ArticleConstant.createTime]: props.articleId ? originArticle[ArticleConstant.createTime] : (new Date().getTime() / 1000).toFixed(),
                 [ArticleConstant.packageId]: form.package,
@@ -191,6 +203,8 @@ const getArticleInfo = () => {
         originArticle = result;
         form.content = result[ArticleConstant.content];
         form.title = result[ArticleConstant.title];
+        // 只在作者自填过时回填；自动生成的不回填，留空 = 继续自动
+        form.abstract = result[ArticleConstant.isCustomAbstract] ? (result[ArticleConstant.abstract] || '') : '';
         form.package = result[ArticleConstant.package][ArticleConstant.packageId];
         form.tags = result[ArticleConstant.tags];
     });
