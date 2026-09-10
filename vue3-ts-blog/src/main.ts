@@ -45,12 +45,39 @@ VueMarkdownEditor.use(vuepressTheme, {
 });
 VueMarkdownEditor.use(createEmojiPlugin());
 VueMarkdownEditor.use(createKatexPlugin());
-VueMarkdownEditor.use(createMermaidPlugin());
+// securityLevel 默认是 'loose'：mermaid 会在 js-xss 过滤之后直接建 SVG DOM，
+// 节点标签里的 <img onerror>/click 指令能绕过 v-md-editor 自带的 xss 白名单执行。
+// 收紧成 'strict'：禁用 htmlLabels 和 click/href，评论/正文里的图表只是图表。
+VueMarkdownEditor.use(createMermaidPlugin({
+    mermaidInitializeOptions: {
+        securityLevel: 'strict',
+        htmlLabels: false,
+        flowchart: { htmlLabels: false }
+    }
+}));
 VueMarkdownEditor.use(createTodoListPlugin());
 VueMarkdownEditor.use(createLineNumberPlugin());
 VueMarkdownEditor.use(createHighlightLinesPlugin());
 VueMarkdownEditor.use(createCopyCodePlugin());
 VueMarkdownEditor.use(createAlignPlugin());
+
+// v-md-editor 渲染前会跑一遍自带的 js-xss 白名单（剥 <script>/on* 等），但它的白名单
+// 默认放行所有标签的 style/class/id。评论区开放注册，放行 style 就能被人塞
+// `<p style="position:fixed;inset:0;z-index:9999">假登录框</p>` 这种全屏钓鱼遮罩；
+// class/id 则能让注入内容套用本站自己的 UI 样式。这里把这三个属性从白名单摘掉，
+// 其余（align、data-*、svg/katex 需要的属性）仍交回原逻辑处理。
+const xssFilter: any = (VueMarkdownEditor as any).xss;
+if (xssFilter?.options) {
+    const fallback = xssFilter.options.onIgnoreTagAttr;
+    xssFilter.options.onIgnoreTagAttr = (tag: string, name: string, value: string, isWhiteAttr: boolean) => {
+        // 返回 undefined = 跟 onerror 等一样，整个属性丢掉
+        if (name === 'style' || name === 'class' || name === 'id') return undefined;
+        return fallback ? fallback(tag, name, value, isWhiteAttr) : undefined;
+    };
+} else {
+    console.warn('[xss] v-md-editor 内置过滤器结构变了，style/class/id 收紧未生效');
+}
+
 if(lang !== defaultLanguage) {
     VueMarkdownEditor.lang.use('en-US', enUS);
 }
