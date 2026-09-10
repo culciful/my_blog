@@ -99,6 +99,7 @@ CREATE TABLE `blog` (
   `title` VARCHAR(64) NOT NULL COMMENT '标题',
   `abstract` VARCHAR(255) NOT NULL COMMENT '列表展示摘要: 作者自填其原文, 否则从正文自动生成(剥markdown+截断)',
   `is_custom_abstract` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'abstract 是否作者自填(1: 编辑回填、改正文不重算)',
+  `status` VARCHAR(16) NOT NULL DEFAULT 'published' COMMENT '发布状态: draft 草稿(仅作者可见, 不进公开列表/详情, 不计入 article_count) / published 已发布',
   `content_text_id` BIGINT UNSIGNED NOT NULL COMMENT '正文text_body.id',
   `view_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '浏览数',
   `comment_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '评论数',
@@ -108,6 +109,7 @@ CREATE TABLE `blog` (
   `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (`id`),
   KEY `idx_blog_user_package` (`user_id`, `package_id`, `is_deleted`, `created_at`),
+  KEY `idx_blog_user_status` (`user_id`, `status`, `is_deleted`, `updated_at`),
   KEY `idx_blog_created_at` (`created_at`),
   KEY `idx_blog_title` (`title`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='文章表';
