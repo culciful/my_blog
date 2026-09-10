@@ -20,14 +20,14 @@
 
 ## 2) 路由前缀
 
-- 通用与认证：`/api/**`（`/api/getConf`、`/api/auth/login`、`/api/auth/logout`）
+- 通用与认证：`/api/**`（`/api/auth/login`、`/api/auth/logout`）
 - 用户域：`/user/**`
 - 文章域：`/article/**`
 - 评论域：`/comment/**`
 
-需前端 RSA 加密后以 `text/plain` 传输的接口（`request.ts` 拦截器处理）：
-`/api/auth/login`、`/user/register`、`/user/updateUserInfo`、`/user/checkPassword`、
-`/user/updatePassword`、`/user/resetPassword`。
+> 所有接口都是明文 `application/json`。传输安全依赖 HTTPS —— **生产环境必须启用 TLS**（2026-09-07 移除了传输层 RSA，见 `项目完成度评估与计划书.md` A3）。
+>
+> **请求体大小**：非 multipart 请求 body 超 1MB（`blog.request-limit.max-body-size` 可调）直接 413 + `-10012`；multipart（图片上传）另见上传加固说明。文章正文 ≤ 10 万字符，评论正文 ≤ 1 万字符，标题 ≤ 64，超限 `-10012`。
 
 ## 3) API 列表
 
@@ -35,13 +35,10 @@
 
 | 接口 | 方法 | 说明 | 主要调用 |
 |---|---|---|---|
-| `/api/getConf` | GET | 获取 RSA 公钥（登录/注册加密用） | `utils/encrypt.ts` |
-| `/api/auth/login` | POST（text/plain 加密） | 账号登录，写入 HttpOnly cookie | `login.vue` |
+| `/api/auth/login` | POST（json） | 账号登录，写入 HttpOnly cookie | `login.vue` |
 | `/api/auth/logout` | POST | 注销登录态 | `customHeader/index.vue` |
 
-`/api/getConf` 返回：`{ "data": "-----BEGIN PUBLIC KEY-----..." }`
-
-`/api/auth/login` 参数（加密前的 JSON）：
+`/api/auth/login` 参数（JSON）：
 
 | 参数 | 类型 | 必填 | 规则 |
 |---|---|---|---|
@@ -56,30 +53,30 @@
 
 | 接口 | 方法 | 说明 | 主要调用 |
 |---|---|---|---|
-| `/user/register` | POST（text/plain 加密） | 注册 | `register.vue` |
-| `/user/checkEmailExist` | POST | 检查邮箱是否已注册 → `{ isExisted }` | `register.vue`、`forgetPassword.vue` |
+| `/user/register` | POST（json） | 注册 | `register.vue` |
+| `/user/checkEmailExist` | POST | 检查邮箱是否已注册 → `{ isRegistered }` | `register.vue`、`forgetPassword.vue` |
 | `/user/getUserInfo` | GET `?id=` | 指定用户公开资料 | `manageContent.vue` |
 | `/user/getMyProfile` | GET | 当前登录用户完整资料（含 email） | `App.vue`、`userCenter.vue` |
-| `/user/updateUserInfo` | POST（json 或 text/plain 加密） | **需登录**，改用户名 / 邮箱（改邮箱需验证码）；不再处理密码 | `userCenter.vue` |
-| `/user/checkPassword` | POST（json 或 text/plain 加密） | 校验当前用户密码 | `userCenter.vue`、`checkPwdDialog.vue` |
-| `/user/updatePassword` | POST（json 或 text/plain 加密） | **需登录**，校验当前密码后改密；改完 `token_version+1`，所有旧 token 失效 | `userCenter.vue` |
-| `/user/resetPassword` | POST（json 或 text/plain 加密） | **匿名**，邮箱验证码（scene=reset）+ 新密码；改完 `token_version+1` | `forgetPassword.vue` |
-| `/user/getStat` | GET | 文章数/关注/粉丝 → `{ articleCount, following, follower }` | `userCenter.vue` |
+| `/user/updateUserInfo` | POST（json） | **需登录**，改用户名 / 邮箱（改邮箱需验证码）；不再处理密码 | `userCenter.vue` |
+| `/user/checkPassword` | POST（json） | 校验当前用户密码 | `userCenter.vue`、`checkPwdDialog.vue` |
+| `/user/updatePassword` | POST（json） | **需登录**，校验当前密码后改密；改完 `token_version+1`，所有旧 token 失效 | `userCenter.vue` |
+| `/user/resetPassword` | POST（json） | **匿名**，邮箱验证码（scene=reset）+ 新密码；改完 `token_version+1` | `forgetPassword.vue` |
+| `/user/getStat` | GET | 文章数/关注/粉丝 → `{ articleCount, followingCount, followerCount }` | `userCenter.vue` |
 | `/user/getFollowings` | POST | 分页查询关注列表 | `follow.vue` |
 | `/user/getFollowers` | POST | 分页查询粉丝列表 | `follow.vue` |
 | `/user/sendEmailCode` | POST | 发送邮箱验证码（`scene`: register/reset/update_email） | `register.vue`、`forgetPassword.vue`、`userCenter.vue` |
 | `/user/checkEmailCode` | POST | 校验邮箱验证码（不消费） | `forgetPassword.vue` |
 | `/user/uploadAvatar` | POST（form-data） | 上传头像（`file` 或 base64 `image`），需登录 | `uploadAvatar.vue` |
-| `/user/checkHasFollow` | GET `?id=` | 查询对目标用户的关注状态 → `{ data: boolean }` | `manageContent.vue` |
-| `/user/switchFollow` | POST | 关注/取关，body `{ id, value }` | `manageContent.vue`、`follow.vue` |
+| `/user/checkHasFollow` | GET `?id=` | 查询对目标用户的关注状态 → `{ isFollowing }` | `manageContent.vue` |
+| `/user/switchFollow` | POST | 关注/取关，body `{ id, shouldFollow }` | `manageContent.vue`、`follow.vue` |
 | `/user/getPackages` | GET `?id=` | 用户的文章分组列表 → `{ list: [{ pid, pname }] }` | `addArticle.vue`、`manageContent.vue` |
 | `/user/addPackage` | POST | 新建分组，body `{ id, pname }` → `{ pid }` | `addArticle.vue`、`manageContent.vue` |
 | `/user/editPackage` | POST | 改分组名，body `{ id, pid, pname }` | `manageContent.vue` |
 | `/user/deletePackage` | POST | 删分组，body `{ id, pid }` | `manageContent.vue` |
 
 分页查询（`getFollowings` / `getFollowers`）body：`{ pageSize, currentPage, filter: { keyword? } }`
-返回：`{ list: [{ id, username, avatarUrl, createTime, followed, mutual }], total }`
-> 不返回他人 `email`。`followed` = 当前用户是否关注了 ta；`mutual` = 互相关注。
+返回：`{ list: [{ id, username, avatarUrl, createTime, isFollowing, isMutual }], total }`
+> 不返回他人 `email`。`isFollowing` = 当前用户是否关注了 ta；`isMutual` = 互相关注。
 
 `updateUserInfo` body（按场景传字段，需登录）：`username` / `email` + `verificationCode`。
 改邮箱成功后 `token_version+1`（当前设备也需重新登录）。
@@ -118,11 +115,22 @@
 `getArticleList` body：`{ pageSize, currentPage, filter: { keyword?, id?（作者）, pid?（分组）, tag? } }`
 返回：`{ list: [{ aid, id, member:{id,username,avatarUrl}, title, createTime, viewCount, commentCount, abstract }], total }`
 
-`getArticleInfo` 返回（在列表项基础上多）：`{ ...列表项, updateTime, content, pid, package:{pid,pname}, tags:string[], comments:{list,total} }`
+`getArticleInfo` 返回（在列表项基础上多）：`{ ...列表项, updateTime, content, isCustomAbstract, pid, package:{pid,pname}, tags:string[], comments:{list,total} }`
 > `updateTime` = 文章最后编辑时间（秒）。浏览量自增不会改动它；仅 `editArticle` 会。
 > 前端判定「编辑过」：`updateTime - createTime > 60`。
+> `isCustomAbstract` = `abstract` 是否作者自填。前端编辑页据此决定是否把 `abstract` 回填到输入框（自动生成的不回填，留空 = 继续自动）。
 
-`addArticle` / `editArticle` body：`{ id（作者，忽略）, aid（仅 edit）, title, content, createTime, pid, tags: string[] }`
+`addArticle` / `editArticle` body：`{ id（作者，忽略）, aid（仅 edit）, title, abstract?, content, createTime, pid, tags: string[] }`
+
+**摘要 `abstract` 生成规则**（`ArticleAbstract`，只有一个概念、一个字段名 `abstract`）：
+> 1. 请求带 `abstract`（非空，≤200）→ 存作者原文（剥 markdown，`is_custom_abstract=1`），**不加省略号**
+> 2. 未带 → 正文里有 `<!-- more -->` → 取它之前的（截 200），**补「…」**
+> 3. 未带、也没 `<!-- more -->` → 整篇正文自动截取（120，词边界断开）；**只有真被截断才补「…」**，短正文原样
+>
+> 2/3 都会先剥 markdown（`#`、`**`、`[]()`、`![]()`、代码块、`$$公式块$$`、引用、列表符…）+ 压缩空白，`is_custom_abstract=0`。
+> 编辑时改正文,`is_custom_abstract=0` 的会重算,`=1` 的不动(作者说了算)。
+> 省略号由后端决定；前端直接渲染 `abstract`，为空则列表不显示摘要行。
+> DB：`blog.abstract`（展示串）+ `blog.is_custom_abstract`。改了生成逻辑后老文章的自动摘要不会自动更新 —— 用 `AbstractBackfill`（test 目录，一次性脚本）重算。
 
 ### 3.4 Comment（`/comment`）
 
@@ -138,7 +146,7 @@
 `getComments` body：`{ aid, root?, pageSize, currentPage }`
 > 无 `root`（列根评论）：每条根评论的 `comments` 内联返回**前 2 条子回复** + `total`（`PREVIEW_REPLIES`）。前端不再逐条挂载请求；`total > 已展示数` 时显示「展开 N 条回复」，点击才带 `root` 拉全量（分页）。
 > 有 `root`（列某根评论的回复）：返回该根下的全部子回复（分页），子项不再嵌套 `comments`。
-`addComment` body：`{ aid, authorId, useMD, content:{msg}, parent?, root? }`
+`addComment` body：`{ aid, authorId, isMarkdown, content:{msg}, parent?, root? }`
 > 评论插图走独立的 `POST /comment/uploadImage`（`asset_type=comment_image`），与文章插图区分。
 
 **图片上传加固**（`ImageStorageService`，头像 / 文章图 / 评论图共用）：
@@ -150,8 +158,8 @@
 > - 文件名 = 雪花 ID + 规范化扩展名；`file_asset` 记服务端判定的 `mime_type` / `width` / `height`
 > - `/uploads/**` 响应带 `X-Content-Type-Options: nosniff`（Spring Security 默认）
 返回项的 `content.member`（`{id,username,avatarUrl}`）：仅「回复的回复」（`parent != root`）时出现，= 父评论作者，前端据此渲染「回复 @xxx：」。后端按 `parent_id` 现算（忽略父评论逻辑删除，删了也照常显示 @），无需前端上传。
-`editComment` body：`{ aid, cid, useMD, content:{msg} }`
-返回项结构：`{ cid, aid, authorId, title, createTime, updateTime, canEdit, useMD, content:{msg}, member:{id,username,avatarUrl}, parent, parentContent:{msg, deleted?}, root, comments:{list,total} }`
+`editComment` body：`{ aid, cid, isMarkdown, content:{msg} }`
+返回项结构：`{ cid, aid, authorId, title, createTime, updateTime, canEdit, isMarkdown, content:{msg}, member:{id,username,avatarUrl}, parent, parentContent:{msg, deleted?}, root, comments:{list,total} }`
 > `parentContent.deleted = true`：被回复的父评论已被删除（前端显示「评论已删除」）。父评论为 null（顶级评论）时 `parentContent = {msg:""}`。
 > `updateTime` = 评论最后编辑时间（秒）；前端 `updateTime - createTime > 60` 时显示「(已编辑)」。
 > `canEdit` = 当前登录用户是否可编辑此评论（本人 + 发布 5 分钟内 + 无回复）。前端据此决定「编辑」菜单项是否出现，「删除」始终有。
