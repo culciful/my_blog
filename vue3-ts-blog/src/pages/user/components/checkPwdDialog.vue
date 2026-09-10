@@ -13,7 +13,7 @@
                 type="password"
                 show-password
                 maxlength="64"
-                minlength="6"
+                minlength="8"
                 v-model="checkForm.password" />
         </el-form-item>
     </el-form>
@@ -52,10 +52,10 @@ interface CheckPwdForm {
 }
 const checkFormRef = ref<FormInstance>();
 const checkForm = reactive<CheckPwdForm>({
-    password: '',
+    password: ''
 });
 const rules = reactive<FormRules<CheckPwdForm>>({
-    password: globalRules.currentPassword,
+    password: globalRules.currentPassword
 });
 let isQuerying = ref(false);
 

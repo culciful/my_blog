@@ -10,6 +10,7 @@
                     <el-input v-if="showSearchInput"
                               class="a-m-h-xs"
                               v-model="keyword"
+                              maxlength="64"
                               @change="changeKeyword"
                               :placeholder="$t('label.search')">
                     </el-input>
@@ -28,6 +29,7 @@
                             <el-input v-model="keyword"
                                       ref="searchInputRef"
                                       clearable
+                                      maxlength="64"
                                       @change="changeKeyword"
                                       :placeholder="$t('label.search')">
                             </el-input>

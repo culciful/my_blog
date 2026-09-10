@@ -2,7 +2,7 @@
 <div class="main-container a-p-lg">
     <div class="flex-between a-font-title-1 a-bb-base a-pb-lg">
         <span>{{isViewFollowing?$t('label.myFollowing'):$t('label.myFans')}}</span>
-        <el-input v-model="keyword" class="a-w-200" :placeholder="$t('label.search')" @change="getData"></el-input>
+        <el-input v-model="keyword" class="a-w-200" maxlength="64" :placeholder="$t('label.search')" @change="getData"></el-input>
     </div>
     <div v-if="total===0" class="a-ta-c a-pt-lg">{{$t('label.emptyData')}}</div>
     <div v-for="item in list" :key="item[Constant.userId]" class="user-item a-bb-base a-p-sm">

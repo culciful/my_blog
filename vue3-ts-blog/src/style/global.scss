@@ -14,7 +14,7 @@ body {
     font-size: 16px;
     font-weight: 400;
     color: $--text-color;
-    //background-color: $--color-white;
+    background-color: $--bg-color;
     direction: ltr;
     transition: color .5s,background-color .5s;
     overflow-wrap: break-word;
@@ -216,11 +216,15 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
 }
 
-
 .flex-between {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.flex-end {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .span-label {

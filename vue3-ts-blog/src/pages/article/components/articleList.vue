@@ -3,7 +3,7 @@
         <div class="article-container">
             <article class="a-mt-md a-pb-sm" v-for="item in articleList" :key="item[ArticleConstant.articleId]">
                 <h3 class="a-font-title-1 a-pos-r a-pr-lg">
-                    <router-link :to="`/article/${item[ArticleConstant.articleId]}`">{{item[ArticleConstant.title]}}</router-link>
+                    <router-link :to="`${isDraft ? '/draft/' : '/article/'}${item[ArticleConstant.articleId]}`">{{item[ArticleConstant.title]}}</router-link>
                     <el-dropdown placement="bottom-end" class="more" v-if="enableOperate">
                         <svg-icon name="more" size="16"></svg-icon>
                         <template #dropdown>
@@ -17,15 +17,15 @@
                 </h3>
                 <p v-if="item[ArticleConstant.abstract]" @click="viewArticle(item[ArticleConstant.articleId])" class="a-font-body-1 a-c-p a-m-v-xs">{{item[ArticleConstant.abstract]}}</p>
                 <footer class="inline-container">
-                    <span class="clickable" @click="viewUser(router, item[ArticleConstant.author])">{{$t('label.author')+': '+item[ArticleConstant.author][ArticleConstant.username]}}</span>
+                    <span class="clickable" @click="item[ArticleConstant.author] && viewUser(router, item[ArticleConstant.author])">{{$t('label.author')+': '+(item[ArticleConstant.author]?.[ArticleConstant.username] ?? '')}}</span>
                     <span class="create-time">{{transferTimestamp(item[ArticleConstant.createTime])}}</span>
                     <span>
                         <svg-icon name="comment-filling" size="16"></svg-icon>
-                        {{item[ArticleConstant.commentCount]}}
+                        {{item[ArticleConstant.commentCount] ?? 0}}
                     </span>
                     <span>
                         <svg-icon name="view" size="16"></svg-icon>
-                        {{item[ArticleConstant.viewCount]}}
+                        {{item[ArticleConstant.viewCount] ?? 0}}
                     </span>
                 </footer>
             </article>
@@ -42,14 +42,14 @@
         </div>
     </template>
     <template v-else>
-        <p class="a-font-body-1 a-m-lg a-ta-c">{{$t('label.noArticle')}}</p>
+        <p class="a-font-body-1 a-m-lg a-ta-c">{{$t('label.noContent')}}</p>
     </template>
 </template>
 
 <script lang="ts" setup name="ArticleList">
 import {transferTimestamp} from '@/utils/utils';
-import {getCurrentInstance, ref, watch} from 'vue';
-import ArticleConstant from '@/model/article/constant';
+import {computed, getCurrentInstance, onMounted, ref, watch} from 'vue';
+import ArticleConstant, {DRAFT_PID} from '@/model/article/constant';
 import {useRouter} from 'vue-router';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import i18n from '@/language/i18n';
@@ -72,6 +72,9 @@ const totalCount = ref(0);
 const currentPage = ref(1);
 let articleList = ref([]);
 
+// 选中「草稿箱」时整个列表切成草稿：换接口 + 链接指向 /draft/:id
+const isDraft = computed(() => props.packageId === DRAFT_PID);
+
 const handleSizeChange = (val: number) => {
     pageSize.value = val;
     getArticleList();
@@ -81,24 +84,32 @@ const handleCurrentChange = (val: number) => {
     getArticleList();
 };
 const viewArticle = (articleId) => {
-    router.push(`/article/${articleId}`);
+    router.push(`${isDraft.value ? '/draft/' : '/article/'}${articleId}`);
 };
 
-watch([() => props.keyword, () => props.tag, () => props.packageId], (val) => {
+// 列表组件自己负责首次加载：靠父组件 prop 变化触发太脆弱
+// （切到「草稿箱」再切回来时本组件会重新挂载，prop 值没变 → watch 不触发 → 空白）
+onMounted(() => getArticleList());
+watch([() => props.keyword, () => props.tag, () => props.packageId, () => props.userId], () => {
     currentPage.value = 1;
     getArticleList();
 });
 
 const getArticleList = () => {
-    proxy.$request.post(ArticleConstant.url.getArticleList, {
-        pageSize: pageSize.value,
-        currentPage: currentPage.value,
-        filter: {
+    const url = isDraft.value ? ArticleConstant.url.getDraftList : ArticleConstant.url.getArticleList;
+    // 草稿列表后端按当前登录用户作用域，不吃 id/pid/tag，只吃关键词
+    const filter = isDraft.value
+        ? { [ArticleConstant.keyword]: props.keyword }
+        : {
             [ArticleConstant.keyword]: props.keyword,
             [ArticleConstant.userId]: props.userId,
             [ArticleConstant.packageId]: props.packageId,
             [ArticleConstant.tag]: props.tag,
-        }
+        };
+    proxy.$request.post(url, {
+        pageSize: pageSize.value,
+        currentPage: currentPage.value,
+        filter
     }).then( ({result}) => {
         articleList.value = result.list;
         totalCount.value = result.total;
@@ -106,7 +117,7 @@ const getArticleList = () => {
 };
 
 const editHandler = (articleId) => {
-    router.push(`/edit/${articleId}`);
+    router.push(`${isDraft.value ? '/draft/' : '/edit/'}${articleId}`);
 };
 const deleteHandler = (articleId) => {
     ElMessageBox.confirm(
@@ -137,10 +148,6 @@ const operateOptions = {
             a:hover {
                 color: $--color-primary-dark-2;
             }
-        }
-
-        &:last-child {
-            border: none;
         }
     }
 }

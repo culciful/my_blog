@@ -4,6 +4,7 @@
     <main class="a-full a-pt-header">
         <div class="main-container">
             <div class="main">
+                <el-scrollbar ref="contentScrollRef" always>
                 <div class="title">
                     <h1>{{article[ArticleConstant.title]}}</h1>
                     <div class="inline-container">
@@ -42,7 +43,7 @@
                         <span class="a-font-body-1 span-label a-mr-xs">{{$t('label.package')+': '}}</span>
                         <el-link type="primary" :underline="false" @click="gotoPackage">{{computedPackage[ArticleConstant.packageName]}}</el-link>
                     </div>
-                    <div v-if="isEdited" class="a-mt-xs">
+                    <div v-if="isEdited" class="a-mt-xs a-font-body-1">
                         {{$t('label.editedAt')+transferTimestamp(article[ArticleConstant.updateTime])}}
                     </div>
                 </div>
@@ -69,19 +70,22 @@
                     </template>
                     <p v-else class="no-comment a-ta-c a-bb-base">{{$t('label.noComment')}}</p>
                 </div>
+                </el-scrollbar>
             </div>
             <div class="aside">
-                <div class="nav">
-                    <p class="tip">{{$t('label.catalogue')}}</p>
-                    <ul>
-                        <li v-for="anchor in titles"
-                            :key="anchor.title"
-                            :style="{ paddingLeft: `${anchor.indent * 20}px` }"
-                            @click="handleAnchorClick(anchor)">
-                            <a class="link ellipsis a-c-p">{{ anchor.title }}</a>
-                        </li>
-                    </ul>
-                </div>
+                <el-scrollbar>
+                    <div class="nav">
+                        <p class="tip">{{$t('label.catalogue')}}</p>
+                        <ul>
+                            <li v-for="anchor in titles"
+                                :key="anchor.title"
+                                :style="{ paddingLeft: `${anchor.indent * 20}px` }"
+                                @click="handleAnchorClick(anchor)">
+                                <a class="link ellipsis a-c-p">{{ anchor.title }}</a>
+                            </li>
+                        </ul>
+                    </div>
+                </el-scrollbar>
             </div>
         </div>
     </main>
@@ -210,6 +214,7 @@ interface anchor {
 }
 const titles: Ref<[anchor]> = ref([]);
 const previewRef = ref();
+const contentScrollRef = ref();
 const getAnchors = () => {
     if(!previewRef.value) return;
     const anchors = previewRef.value.$el.querySelectorAll('h1,h2,h3,h4,h5,h6');
@@ -234,11 +239,12 @@ const handleAnchorClick = (anchor) => {
     const { lineIndex } = anchor;
 
     const heading = preview.$el.querySelector(`[data-v-md-line="${lineIndex}"]`);
+    const wrap = contentScrollRef.value?.wrapRef;   // el-scrollbar 的滚动容器
 
-    if (heading) {
-        window.scrollTo({
-            /* title高度128 */
-            top: heading.offsetTop - 20 + 128,
+    if (heading && wrap) {
+        const delta = heading.getBoundingClientRect().top - wrap.getBoundingClientRect().top;
+        contentScrollRef.value.scrollTo({
+            top: wrap.scrollTop + delta - 20,
             behavior: 'smooth'
         });
     }
@@ -250,12 +256,67 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+// 让正文自己滚（滚动条落在正文列右侧，不在窗口最右），头部和目录不跟着动。
+// a-full / main 都夹死 overflow，保证唯一能滚的是里面的 el-scrollbar，不会出现「窗口 + 内容」两条滚动条
+.a-full {
+    overflow: hidden;
+}
+main {
+    overflow: hidden;
+}
 .main-container {
     display: flex;
     justify-content: center;
+    height: 100%;
+    position: relative;   // 目录绝对定位的锚点
     .main {
-        width: 900px;
-        padding-bottom: 96px;
+        width: 100%;
+        max-width: 900px;   // 大屏封顶 900，窄屏跟着收
+        min-width: 0;        // 允许 flex 压缩到内容宽度以下（否则代码块会把它撑住）
+        height: 100%;
+        // 正文用 el-scrollbar 撑满这一列；padding-right 让滚动条离正文一段距离
+        padding-right: 16px;
+        :deep(.el-scrollbar) {
+            height: 100%;
+        }
+        :deep(.el-scrollbar__view) {
+            padding-right: 8px;
+            padding-bottom: 96px;
+        }
+        // v-md-editor 预览态内部还套了一层自己的 scrollbar 组件。某些情况下它自己会拿到
+        // 固定高度、内部滚动（标题不动、正文单独滚）+ 渲染一条满高灰条 → 就是「两条滚动条」。
+        // 容器结构留着，强制它 auto 高、不滚、藏掉 bar，只让外面这个 el-scrollbar 滚整篇。
+        :deep(.v-md-editor--preview) {
+            height: auto !important;
+        }
+        :deep(.v-md-editor__preview-wrapper),
+        :deep(.v-md-editor__preview-wrapper .scrollbar__wrap) {
+            height: auto !important;
+            overflow: visible !important;
+            // 上面把默认的 overflow:hidden 摘了 → flex item 的自动最小尺寸不再是 0，
+            // 会被最宽的不可折行内容（代码块 / KaTeX nowrap 公式）撑破这一列。补回 min-width:0。
+            min-width: 0 !important;
+        }
+        :deep(.v-md-editor__preview-wrapper .scrollbar__bar) {
+            display: none;
+        }
+        // KaTeX 块级公式：katex.min.css 只给了 text-align:center，没给 overflow。
+        // 宽公式会顶破列宽（连带整篇不居中）。这里补上：超宽时公式自己横向滚，不撑正文。
+        :deep(.vuepress-markdown-body .katex-display) {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 2px 0;
+        }
+        // 正文滚动条加粗一点，好点
+        :deep(.el-scrollbar__bar.is-vertical) {
+            width: 10px;
+            .el-scrollbar__thumb {
+                background-color: rgba(0, 0, 0, 0.24);
+                &:hover {
+                    background-color: rgba(0, 0, 0, 0.36);
+                }
+            }
+        }
         .title {
             padding: 32px 40px 0;
             h1 {
@@ -294,19 +355,22 @@ onMounted(() => {
         }
     }
     .aside {
-        position: relative;
+        // 绝对定位钉在右侧：正文由 justify-content 居中在视口，目录浮在右边空白里
         display: none;
-        width: 320px;
-        padding-left: 64px;
-        padding-top: 32px;
-        flex-shrink: 0;
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 240px;
+        padding: 24px;   // 滚动条别贴窗口边
         font-size: 13px;
         background: $--bg-color;
-        .nav {
-            position: sticky;
-            width: 224px;
-            top: ($--nav-height + 24px);
-            bottom: 0;
+        // 目录用 el-scrollbar 撑满，比视口高时自己滚
+        :deep(.el-scrollbar) {
+            height: 100%;
+        }
+        :deep(.el-scrollbar__bar.is-vertical) {
+            width: 8px;
         }
         .tip {
             margin-bottom: 4px;
@@ -322,17 +386,22 @@ onMounted(() => {
             }
         }
     }
-    @media (min-width: 1280px) {
-        & {
-            margin-left: 320px;
+    // 窄屏：正文两侧留点边距，别贴到窗口
+    @media (max-width: 768px) {
+        .main :deep(.el-scrollbar__view) {
+            padding-left: 12px;
         }
-        .aside {
-            display: block;
+        .main .title,
+        .main .info {
+            padding-left: 12px;
+            padding-right: 12px;
         }
     }
-    @media (min-width: 1440px) {
+    // ≥1280：两侧对称留出 240 的槽（正文仍视口居中），右槽放绝对定位的目录，不会压正文
+    @media (min-width: 1280px) {
+        padding: 0 240px;
         .aside {
-            padding-left: 96px;
+            display: block;
         }
     }
 }

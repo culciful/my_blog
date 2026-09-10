@@ -15,15 +15,15 @@
             size="large"
             class="a-mt-xxl">
             <el-form-item prop="username">
-                <el-input v-model="loginForm.username" :placeholder="$t('label.usernameOrEmail')" maxlength="64" minlength="1" />
+                <el-input v-model="loginForm.username" :placeholder="$t('label.usernameOrEmail')" maxlength="64" />
             </el-form-item>
             <el-form-item prop="password">
                 <el-input
                     type="password"
                     show-password
                     v-model="loginForm.password"
-                    minlength="6"
                     maxlength="64"
+                    minlength="8"
                     :placeholder="$t('label.password')" />
             </el-form-item>
             <el-form-item>

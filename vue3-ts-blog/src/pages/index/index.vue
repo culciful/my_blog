@@ -25,8 +25,8 @@ const handleKeywordChange = (val) => {
 };
 
 onMounted(() => {
-    keyword.value = route.query?.keyword as string;
-    tag.value = route.query?.tag as string;
+    keyword.value = (route.query?.keyword as string) ?? '';
+    tag.value = (route.query?.tag as string) ?? '';
 });
 
 </script>

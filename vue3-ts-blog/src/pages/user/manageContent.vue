@@ -21,13 +21,19 @@
                 </svg-icon>
             </p>
             <el-scrollbar :style="isVisitMode?'height: calc(100% - 113px)':'height: calc(100% - 48px)'">
+                <div v-if="!isVisitMode"
+                     :class="{'selected': selectedPackageId===DRAFT_PID}"
+                     @click="changePackage(DRAFT_PID)"
+                     class="package-item a-m-v-xs a-c-p flex-between">
+                    <span class="a-font-label-1">{{$t('label.draftBox')}}</span>
+                </div>
                 <div v-for="item in packageList"
                      :key="item[Constant.packageId]"
                      :class="{'selected': item[Constant.packageId]===selectedPackageId}"
                      @click="changePackage(item[Constant.packageId])"
                      class="package-item a-m-v-xs a-c-p flex-between">
                     <span class="a-font-label-1">{{item[Constant.packageName]}}</span>
-                    <span v-if="!isVisitMode" class="span-label">
+                    <span v-if="!isVisitMode && item[Constant.packageId] !== 0" class="span-label">
                         <svg-icon class="a-mr-xxs a-c-h-primary"
                                   name="edit-pen"
                                   @click="editPackage(item)"
@@ -44,18 +50,19 @@
         </div>
         <div class="main a-d-ib a-va-t a-h-f">
             <div class="panel">
-                <div class="user">
-                    <img src="" alt="">
-                </div>
-                <div class="search">
+                <div class="search flex-end">
                     <el-select class="select-package a-mr-sm" v-model="selectedPackageId">
+                        <el-option v-if="!isVisitMode"
+                                   :label="$t('label.draftBox')"
+                                   :value="DRAFT_PID">
+                        </el-option>
                         <el-option v-for="item in packageList"
                                    :label="item[Constant.packageName]"
                                    :value="item[Constant.packageId]"
                                    :key="item[Constant.packageId]">
                         </el-option>
                     </el-select>
-                    <el-input v-model="keyword" @change="changeWord" :placeholder="$t('label.search')" class="a-w-200"></el-input>
+                    <el-input v-model="keyword" @change="changeWord" maxlength="64" :placeholder="$t('label.search')" class="a-w-200"></el-input>
                 </div>
             </div>
             <el-scrollbar class="a-h-f a-p-h-lg">
@@ -75,6 +82,7 @@ import {onMounted, getCurrentInstance, ref, reactive} from 'vue';
 import Constant, {defaultPackage, handleAvatar} from '@/model/user/constant';
 import {useUserStore} from '@/stores/user';
 import ArticleList from '@/pages/article/components/articleList.vue';
+import {DRAFT_PID} from '@/model/article/constant';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import i18n from '@/language/i18n';
 import {useRoute} from 'vue-router';
@@ -99,8 +107,10 @@ const changeWord = () => {
     searchKeyword.value = keyword.value;
 };
 
-const packageList = ref([defaultPackage]);
-let selectedPackageId = ref();
+// 「草稿箱」不进 packageList（那数组还要喂 article-list / :class / el-option，塞个假分组太脆）
+// 而是在左栏和移动端下拉框里各自单独渲染一条，排在最前；选中它 = selectedPackageId === DRAFT_PID
+const packageList = ref<Array<Record<string, any>>>([defaultPackage]);
+let selectedPackageId = ref<number | string>(0);
 
 const getPackages = () => {
     proxy.$request.get(Constant.url.getPackages, { [Constant.userId]: userInfo[Constant.userId] }).then((res) => {
@@ -112,9 +122,10 @@ const changePackage = (id) => {
     searchKeyword.value = keyword.value = '';
 };
 const addPackage = () => {
+    // ElMessageBox 没有 inputAttrs 选项，长度只能靠 inputPattern 卡（1-64 字、非空格开头）
     ElMessageBox.prompt(t('inputMessage.inputPackageName'), t('label.tip'), {
         inputPattern: /^\S.{0,63}$/,
-        inputErrorMessage: t('inputMessage.titleFormat')
+        inputErrorMessage: t('inputMessage.packageNameLimit')
     }).then(({ value }) => {
         if(packageList.value.some(item => item[Constant.packageName] === value)) {
             ElMessage.error(t('infoMessage.duplicateName'));
@@ -140,7 +151,7 @@ const editPackage = (item) => {
     ElMessageBox.prompt(t('inputMessage.editPackageName'), t('label.tip'), {
         inputValue: item[Constant.packageName],
         inputPattern: /^\S.{0,63}$/,
-        inputErrorMessage: t('inputMessage.invalidInput')
+        inputErrorMessage: t('inputMessage.packageNameLimit')
     }).then(({ value }) => {
         proxy.$request.post(Constant.url.editPackage, {
             [Constant.userId]: userInfo[Constant.userId],
@@ -194,19 +205,21 @@ const switchFollow = () => {
 
 onMounted(() => {
     void (async () => {
-        isVisitMode.value = !!query?.[Constant.userId];
-        selectedPackageId.value = 0;
+        const raw = query[Constant.userId] as string | string[] | undefined;
+        // 雪花 ID 超出 JS Number 安全范围，保持字符串，勿转 Number
+        const queriedId = (Array.isArray(raw) ? raw[0] : raw) ?? '';
+        // 带 ?id= 且不是自己 → 访客视角；是自己（从自己文章的合集链接点进来）→ 当作自己的内容管理
+        isVisitMode.value = !!queriedId && String(queriedId) !== String(userStore.id);
+
+        // pid 不管访客还是自己都尊重（合集链接带过来的）；草稿箱只有自己能进
+        const rawPid = query[Constant.packageId] as string | string[] | undefined;
+        const pidStr = Array.isArray(rawPid) ? rawPid[0] : rawPid;
+        const validPid = pidStr != null && pidStr !== '' && pidStr !== '0'
+            && !(pidStr === DRAFT_PID && isVisitMode.value);
+        selectedPackageId.value = validPid ? pidStr : 0;
 
         if (isVisitMode.value) {
-            const rawPid = query[Constant.packageId] as string | string[] | undefined;
-            const pidStr = Array.isArray(rawPid) ? rawPid[0] : rawPid;
-            // 雪花 ID 保持字符串，勿转 Number
-            if (pidStr != null && pidStr !== '' && pidStr !== '0') {
-                selectedPackageId.value = pidStr;
-            }
-            const raw = query[Constant.userId] as string | string[] | undefined;
-            // 雪花 ID 超出 JS Number 安全范围，保持字符串，勿转 Number
-            userInfo[Constant.userId] = (Array.isArray(raw) ? raw[0] : raw) ?? '';
+            userInfo[Constant.userId] = queriedId;
             try {
                 const res: { result: Record<string, unknown> } = await proxy.$request.get(
                     Constant.url.getUserInfo,
@@ -235,6 +248,10 @@ onMounted(() => {
 }
 .aside {
     width: 320px;
+    // 给内容右侧留白，编辑/删除图标不贴着滚动条
+    :deep(.el-scrollbar__view) {
+        padding-right: 10px;
+    }
     .user-panel {
         display: flex;
         align-items: center;
@@ -258,11 +275,6 @@ onMounted(() => {
         .span-label {
             opacity: 0;
         }
-        &:first-of-type {
-            .span-label {
-                display: none !important;
-            }
-        }
         &.selected {
             background: $--bg-color-page;
             span.a-font-label-1 {
@@ -282,11 +294,9 @@ onMounted(() => {
     width: calc(100% - 344px);
     background: $--bg-color;
     .search {
-        display: flex;
-        justify-content: flex-end;
         margin: 24px 24px 0;
         .select-package {
-            display: none;
+            display: none;   // 桌面端用左侧 .aside 分组栏；这个下拉框只在 ≤800px 手机端出现
         }
     }
     .el-scrollbar {

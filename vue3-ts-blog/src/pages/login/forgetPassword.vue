@@ -17,11 +17,12 @@
             class="a-mt-xxl">
             <template v-if="active===0">
                 <el-form-item prop="email">
-                    <el-input v-model="forgetPwdForm.email" type="email" :placeholder="$t('label.email')" />
+                    <el-input v-model="forgetPwdForm.email" type="email" maxlength="64" :placeholder="$t('label.email')" />
                 </el-form-item>
                 <el-form-item prop="verificationCode" class="verification-code">
                     <el-input
                         v-model="forgetPwdForm.verificationCode"
+                        maxlength="6"
                         :placeholder="$t('label.verificationCode')" />
                     <el-button plain @click="sendVeriCode" :disabled="hasSendCode">
                         {{hasSendCode?($t('label.resend')+timeToGet+'s'):$t('label.getVerificationCode')}}
@@ -34,7 +35,7 @@
                         type="password"
                         show-password
                         maxlength="64"
-                        minlength="6"
+                        minlength="8"
                         v-model="forgetPwdForm.newPassword"
                         :disabled="isQuerying"
                         :placeholder="$t('label.newPassword')" />
@@ -44,7 +45,7 @@
                         type="password"
                         show-password
                         maxlength="64"
-                        minlength="6"
+                        minlength="8"
                         v-model="forgetPwdForm.confirmNewPwd"
                         :disabled="isQuerying"
                         :placeholder="$t('label.confirmNewPwd')" />

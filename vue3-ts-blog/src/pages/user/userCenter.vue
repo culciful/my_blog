@@ -41,8 +41,7 @@
                     <el-input
                         :disabled="isQuerying"
                         v-model="userForm.username"
-                        maxlength="20"
-                        minlength="1" />
+                        maxlength="20" />
                 </el-form-item>
             </template>
             <el-form-item v-else prop="username" :label="$t('label.username')">
@@ -53,10 +52,10 @@
             </el-form-item>
             <template v-if="editContent==='email'">
                 <el-form-item prop="email" :label="$t('label.email')">
-                    <el-input type="email" v-model="userForm.email" :disabled="isQuerying"/>
+                    <el-input type="email" v-model="userForm.email" maxlength="64" :disabled="isQuerying"/>
                 </el-form-item>
                 <el-form-item prop="verificationCode">
-                    <el-input v-model="userForm.verificationCode" :disabled="!isCheckedPwd||isQuerying" :placeholder="$t('label.verificationCode')" />
+                    <el-input v-model="userForm.verificationCode" maxlength="6" :disabled="!isCheckedPwd||isQuerying" :placeholder="$t('label.verificationCode')" />
                     <el-button v-if="!hasSendCode" @click="sendVeriCode" class="a-ml-xxs" link type="primary">{{$t('label.getVerificationCode')}}</el-button>
                     <el-button v-else disabled class="a-ml-xxs" link type="primary">{{timeToGet}}s</el-button>
                 </el-form-item>
@@ -73,7 +72,7 @@
                         type="password"
                         show-password
                         maxlength="64"
-                        minlength="6"
+                        minlength="8"
                         v-model="userForm.password"
                         :disabled="isQuerying"
                         :placeholder="$t('inputMessage.inputPassword')" />
@@ -83,8 +82,8 @@
                     <el-input
                         type="password"
                         show-password
+                        minlength="8"
                         maxlength="64"
-                        minlength="6"
                         v-model="userForm.newPassword"
                         :disabled="isQuerying"
                         :placeholder="$t('inputMessage.inputNewPassword')" />
@@ -93,8 +92,8 @@
                     <el-input
                         type="password"
                         show-password
+                        minlength="8"
                         maxlength="64"
-                        minlength="6"
                         v-model="userForm.confirmNewPwd"
                         :disabled="isQuerying"
                         :placeholder="$t('inputMessage.confirmNewPassword')" />

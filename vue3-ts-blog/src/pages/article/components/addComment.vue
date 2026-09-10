@@ -6,6 +6,8 @@
         v-model="newComment"
         :rows="3"
         type="textarea"
+        maxlength="10000"
+        show-word-limit
         :placeholder="placeholder"
     />
     <v-md-editor v-show="isMarkdown"
@@ -94,6 +96,11 @@ const publish = () => {
     newComment.value = newComment.value.trim();
     if(newComment.value.length === 0) {
         ElMessage.error(t('inputMessage.invalidInput'));
+        return;
+    }
+    // markdown 模式用 v-md-editor，没有 maxlength，这里兜一下（纯文本模式已被 maxlength 挡住）
+    if(newComment.value.length > 10000) {
+        ElMessage.error(t('inputMessage.commentTooLong'));
         return;
     }
     let params = {};

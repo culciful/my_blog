@@ -43,6 +43,12 @@ const routes = [
         component: () => import('../pages/article/addArticle.vue')
     },
     {
+        path: '/draft/:articleId',
+        name: 'editDraft',
+        component: () => import('../pages/article/addArticle.vue'),
+        props: true
+    },
+    {
         path: '/user',
         component: () => import('../pages/user/index.vue'),
         children: [
@@ -85,7 +91,7 @@ const router = createRouter<RouterOptions>({
     routes
 } as RouterOptions);
 
-export const needLoginPathReg = /^\/(user\/\S+|message|write|edit)/;
+export const needLoginPathReg = /^\/(user\/\S+|message|write|edit|draft)/;
 router.beforeEach((to, from) => {
     if (needLoginPathReg.test(to.path)) {
         const hasLogin = !!localStorage.getItem(LOGIN_STATE);

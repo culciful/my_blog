@@ -15,11 +15,12 @@
             size="large" 
             class="a-mt-xxl">
             <el-form-item prop="email">
-                <el-input type="email" v-model="registerForm.email" :placeholder="$t('label.email')" />
+                <el-input type="email" v-model="registerForm.email" maxlength="64" :placeholder="$t('label.email')" />
             </el-form-item>
             <el-form-item prop="verificationCode" class="verification-code">
                 <el-input
                     v-model="registerForm.verificationCode"
+                    maxlength="6"
                     :placeholder="$t('label.verificationCode')" />
                 <el-button plain @click="sendVeriCode" :disabled="hasSendCode">
                     {{hasSendCode?($t('label.resend')+timeToGet+'s'):$t('label.getVerificationCode')}}
@@ -28,15 +29,14 @@
             <el-form-item prop="username">
                 <el-input v-model="registerForm.username"
                           :placeholder="$t('label.username')"
-                          maxlength="20"
-                          minlength="1" />
+                          maxlength="20" />
             </el-form-item>
             <el-form-item prop="password">
                 <el-input
                         type="password"
                         show-password
                         maxlength="64"
-                        minlength="6"
+                        minlength="8"
                         v-model="registerForm.password"
                         :placeholder="$t('label.password')" />
             </el-form-item>

@@ -1,0 +1,34 @@
+{
+  "errorCode": 0,
+  "result": {
+    "list": [
+      {
+        "aid": 900001,
+        "id": "1231",
+        "member": {
+          "username": "郎中",
+          "id": "1231"
+        },
+        "title": "未写完的随笔",
+        "createTime": 1704034129,
+        "viewCount": 0,
+        "commentCount": 0,
+        "abstract": "这是草稿的自动摘要预览，正文写到一半……"
+      },
+      {
+        "aid": 900002,
+        "id": "1231",
+        "member": {
+          "username": "郎中",
+          "id": "1231"
+        },
+        "title": "选题草稿：Vue 组件设计",
+        "createTime": 1704031129,
+        "viewCount": 0,
+        "commentCount": 0,
+        "abstract": ""
+      }
+    ],
+    "total": 2
+  }
+}
