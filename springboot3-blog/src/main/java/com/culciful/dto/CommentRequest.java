@@ -17,7 +17,7 @@ public record CommentRequest(
         Long authorId,
 
         @NotNull
-        Boolean useMD,
+        Boolean isMarkdown,
 
         /** 前端 content 为对象 {msg, member}；member 用于 @提及展示，后端暂不消费 */
         @NotNull

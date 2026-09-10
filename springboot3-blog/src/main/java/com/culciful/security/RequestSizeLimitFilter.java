@@ -45,10 +45,10 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String contentType = request.getContentType();
-        boolean multipart = contentType != null
+        boolean isMultipart = contentType != null
                 && contentType.toLowerCase(Locale.ROOT).startsWith("multipart/");
 
-        if (multipart) {
+        if (isMultipart) {
             filterChain.doFilter(request, response);
             return;
         }

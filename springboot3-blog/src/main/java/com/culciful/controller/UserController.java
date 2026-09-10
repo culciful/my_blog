@@ -74,8 +74,8 @@ public class UserController {
      * register
      */
     @PostMapping("register")
-    public R<Void> register(@RequestBody @Valid RegisterRequest req) {
-        return userService.register(req);
+    public R<Void> register(@RequestBody @Valid RegisterRequest request) {
+        return userService.register(request);
     }
 
     /**
@@ -148,14 +148,13 @@ public class UserController {
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        long articleCount = userInfoMapper.selectById(selfId).getArticleCount() == null
-                ? 0
-                : userInfoMapper.selectById(selfId).getArticleCount();
-        long following = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+        Integer ownArticleCount = userInfoMapper.selectById(selfId).getArticleCount();
+        long articleCount = ownArticleCount == null ? 0 : ownArticleCount;
+        long followingCount = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFollowerId, selfId));
-        long follower = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+        long followerCount = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFollowingId, selfId));
-        return R.ok(Map.of("articleCount", articleCount, "following", following, "follower", follower));
+        return R.ok(Map.of("articleCount", articleCount, "followingCount", followingCount, "followerCount", followerCount));
     }
 
     @PostMapping("getFollowings")
@@ -164,7 +163,7 @@ public class UserController {
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        return R.ok(followPageResult(selfId, true, request));
+        return R.ok(followPageResult(selfId, /* isFollowingList */ true, request));
     }
 
     @PostMapping("getFollowers")
@@ -173,13 +172,13 @@ public class UserController {
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        return R.ok(followPageResult(selfId, false, request));
+        return R.ok(followPageResult(selfId, /* isFollowingList */ false, request));
     }
 
     @PostMapping("sendEmailCode")
     public R<Void> sendEmailCode(@RequestBody @Valid EmailCodeRequest request, HttpServletRequest httpRequest) {
         String reason = emailVerificationCodeService.sendCode(
-                request.email(), sceneOrDefault(request.scene()), RequestUtils.clientIp(httpRequest));
+                request.email(), requireValidScene(request.scene()), RequestUtils.clientIp(httpRequest));
         if (reason == null) {
             return R.ok(null);
         }
@@ -196,7 +195,7 @@ public class UserController {
         if (request == null || isBlank(request.email()) || isBlank(request.verificationCode())) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
-        return emailVerificationCodeService.verifyCode(request.email(), request.verificationCode(), sceneOrDefault(request.scene()))
+        return emailVerificationCodeService.verifyCode(request.email(), request.verificationCode(), requireValidScene(request.scene()))
                 ? R.ok(null)
                 : R.fail(ResultCodeEnum.PARAM_ERROR);
     }
@@ -228,10 +227,10 @@ public class UserController {
         if (targetId == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
-        boolean followed = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+        boolean isFollowing = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFollowerId, selfId)
                 .eq(UserFollow::getFollowingId, targetId)) > 0;
-        return R.ok(Map.of("data", followed));
+        return R.ok(Map.of("isFollowing", isFollowing));
     }
 
     @PostMapping("switchFollow")
@@ -241,13 +240,13 @@ public class UserController {
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        if (targetId == null || selfId.equals(targetId) || request == null || request.value() == null) {
+        if (targetId == null || selfId.equals(targetId) || request == null || request.shouldFollow() == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
-        boolean exists = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+        boolean isFollowing = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFollowerId, selfId)
                 .eq(UserFollow::getFollowingId, targetId)) > 0;
-        if (request.value() && !exists) {
+        if (request.shouldFollow() && !isFollowing) {
             UserFollow follow = new UserFollow();
             follow.setId(snowflakeIdGenerator.nextId());
             follow.setFollowerId(selfId);
@@ -255,7 +254,7 @@ public class UserController {
             follow.setCreatedAt(LocalDateTime.now());
             follow.setUpdatedAt(LocalDateTime.now());
             userFollowMapper.insert(follow);
-        } else if (!request.value() && exists) {
+        } else if (!request.shouldFollow() && isFollowing) {
             userFollowMapper.delete(new LambdaQueryWrapper<UserFollow>()
                     .eq(UserFollow::getFollowerId, selfId)
                     .eq(UserFollow::getFollowingId, targetId));
@@ -343,7 +342,7 @@ public class UserController {
         }
         UserInfo user = new UserInfo();
         user.setId(selfId);
-        boolean emailChanged = false;
+        boolean isEmailChanged = false;
         if (!isBlank(request.username())) {
             user.setUsername(request.username());
         }
@@ -356,11 +355,11 @@ public class UserController {
                 return R.fail(ResultCodeEnum.PARAM_ERROR);
             }
             user.setEmail(request.email());
-            emailChanged = true;
+            isEmailChanged = true;
         }
         user.setUpdatedAt(LocalDateTime.now());
         userInfoMapper.updateById(user);
-        if (emailChanged) {
+        if (isEmailChanged) {
             bumpTokenVersion(selfId);
         }
         return R.ok(null);
@@ -448,23 +447,23 @@ public class UserController {
         return m;
     }
 
-    private Map<String, Object> followPageResult(Long selfId, boolean followingPage, PageSearchRequest request) {
+    private Map<String, Object> followPageResult(Long selfId, boolean isFollowingList, PageSearchRequest request) {
         Object keyword = request.safeFilter().get("keyword");
-        String kw = keyword == null ? "" : keyword.toString().trim();
+        String keywordTrimmed = keyword == null ? "" : keyword.toString().trim();
         LambdaQueryWrapper<UserFollow> wrapper = new LambdaQueryWrapper<UserFollow>()
-                .eq(followingPage ? UserFollow::getFollowerId : UserFollow::getFollowingId, selfId)
+                .eq(isFollowingList ? UserFollow::getFollowerId : UserFollow::getFollowingId, selfId)
                 .orderByDesc(UserFollow::getCreatedAt);
-        if (!kw.isEmpty()) {
+        if (!keywordTrimmed.isEmpty()) {
             List<Long> matchedUserIds = userInfoMapper.selectList(new LambdaQueryWrapper<UserInfo>()
                             .eq(UserInfo::getIsDeleted, false)
-                            .and(w -> w.like(UserInfo::getUsername, kw).or().like(UserInfo::getEmail, kw)))
+                            .and(w -> w.like(UserInfo::getUsername, keywordTrimmed).or().like(UserInfo::getEmail, keywordTrimmed)))
                     .stream()
                     .map(UserInfo::getId)
                     .toList();
             if (matchedUserIds.isEmpty()) {
                 return Map.of("list", List.of(), "total", 0);
             }
-            wrapper.in(followingPage ? UserFollow::getFollowingId : UserFollow::getFollowerId, matchedUserIds);
+            wrapper.in(isFollowingList ? UserFollow::getFollowingId : UserFollow::getFollowerId, matchedUserIds);
         }
         Page<UserFollow> page = userFollowMapper.selectPage(
                 new Page<>(request.safeCurrentPage(), request.safePageSize()),
@@ -472,21 +471,21 @@ public class UserController {
         );
         List<Map<String, Object>> list = new ArrayList<>();
         for (UserFollow relation : page.getRecords()) {
-            Long userId = followingPage ? relation.getFollowingId() : relation.getFollowerId();
+            Long userId = isFollowingList ? relation.getFollowingId() : relation.getFollowerId();
             UserInfo user = loadActiveUser(userId);
             if (user == null) {
                 continue;
             }
             Map<String, Object> m = toPublicProfile(user);
             // 不对外暴露他人邮箱
-            boolean iFollowThem = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+            boolean isFollowedByMe = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                     .eq(UserFollow::getFollowerId, selfId)
                     .eq(UserFollow::getFollowingId, userId)) > 0;
-            boolean theyFollowMe = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+            boolean isFollowingMe = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                     .eq(UserFollow::getFollowerId, userId)
                     .eq(UserFollow::getFollowingId, selfId)) > 0;
-            m.put("followed", iFollowThem);
-            m.put("mutual", iFollowThem && theyFollowMe);
+            m.put("isFollowing", isFollowedByMe);
+            m.put("isMutual", isFollowedByMe && isFollowingMe);
             list.add(m);
         }
         return Map.of("list", list, "total", page.getTotal());
@@ -523,7 +522,7 @@ public class UserController {
     }
 
     /** 空 → register；否则必须是三个已知场景之一，未知场景直接拒（防日志注入 / 借服务器给任意邮箱发信） */
-    private String sceneOrDefault(String scene) {
+    private String requireValidScene(String scene) {
         if (isBlank(scene)) {
             return EmailVerificationCodeService.SCENE_REGISTER;
         }

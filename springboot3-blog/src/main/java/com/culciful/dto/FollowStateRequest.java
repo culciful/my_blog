@@ -6,6 +6,7 @@ public record FollowStateRequest(
         /** target user id (RPC style: carried in body instead of the URL path) */
         Long id,
 
+        /** shouldFollow: true=关注, false=取关 */
         @NotNull
-        Boolean value
+        Boolean shouldFollow
 ) {}

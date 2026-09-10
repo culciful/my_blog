@@ -14,8 +14,8 @@ public class TestUtils {
 
     @Test
     public void testJwt() {
-        // 生成 传入用户标识
-        String token = jwtHelper.createToken(1L);
+        // 生成 传入用户标识 + token 版本号
+        String token = jwtHelper.createToken(1L, 0L);
         System.out.println("token = " + token);
 
         // 解析用户标识
@@ -23,8 +23,8 @@ public class TestUtils {
         System.out.println("userId = " + userId);
 
         // 校验是否到期! false 未到期 true到期
-        boolean expiration = jwtHelper.isExpiration(token);
-        System.out.println("expiration = " + expiration);
+        boolean isExpired = jwtHelper.isExpired(token);
+        System.out.println("isExpired = " + isExpired);
     }
 }
 

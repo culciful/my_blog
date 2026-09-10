@@ -41,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         try {
             String token = readTokenFromCookie(request);
-            if (token != null && !jwtHelper.isExpiration(token)) {
+            if (token != null && !jwtHelper.isExpired(token)) {
                 Long userId = jwtHelper.getUserId(token);
                 UserInfo user = userId == null ? null : userInfoMapper.selectById(userId);
                 if (user != null && tokenVersionMatches(user, token)) {

@@ -42,7 +42,7 @@ class ContractSmokeTest {
                         .content("{\"email\":\"contract-test@example.com\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorCode").value(0))
-                .andExpect(jsonPath("$.result.isExisted").isBoolean());
+                .andExpect(jsonPath("$.result.isRegistered").isBoolean());
     }
 
     @Test

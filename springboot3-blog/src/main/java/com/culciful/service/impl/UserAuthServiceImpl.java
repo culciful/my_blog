@@ -55,10 +55,10 @@ public class UserAuthServiceImpl implements UserAuthService {
             return null;
         }
         // 含 @ 按邮箱匹配，否则按用户名匹配——避免「用户名」与「他人邮箱」字面相同导致的歧义
-        boolean asEmail = usernameOrEmail.contains("@");
+        boolean isEmailLogin = usernameOrEmail.contains("@");
         UserInfo user = userInfoMapper.selectOne(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getIsDeleted, false)
-                .eq(asEmail ? UserInfo::getEmail : UserInfo::getUsername, usernameOrEmail)
+                .eq(isEmailLogin ? UserInfo::getEmail : UserInfo::getUsername, usernameOrEmail)
                 .last("LIMIT 1"));
         if (user == null) {
             return null;

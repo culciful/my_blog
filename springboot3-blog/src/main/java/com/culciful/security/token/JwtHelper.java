@@ -92,7 +92,7 @@ public class JwtHelper {
         }
     }
 
-    public boolean isExpiration(String token) {
+    public boolean isExpired(String token) {
         try {
             return parse(token).getExpiration().before(new Date());
         } catch (Exception e) {

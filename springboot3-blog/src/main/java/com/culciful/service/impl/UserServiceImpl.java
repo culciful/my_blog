@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -38,17 +37,17 @@ public class UserServiceImpl implements UserService {
                 EmailVerificationCodeService.SCENE_REGISTER)) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
-        boolean emailExists = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
+        boolean isEmailRegistered = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getIsDeleted, false)
                 .eq(UserInfo::getEmail, request.email())) > 0;
-        if (emailExists) {
+        if (isEmailRegistered) {
             return R.fail(ResultCodeEnum.EMAIL_USED);
         }
 
-        boolean usernameExists = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
+        boolean isUsernameTaken = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getIsDeleted, false)
                 .eq(UserInfo::getUsername, request.username())) > 0;
-        if (usernameExists) {
+        if (isUsernameTaken) {
             return R.fail(ResultCodeEnum.USERNAME_USED);
         }
 
@@ -84,8 +83,6 @@ public class UserServiceImpl implements UserService {
         Long count = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getEmail, emailExistParam.email())
                 .eq(UserInfo::getIsDeleted, false));
-        Map<String, Boolean> data = new HashMap<>();
-        data.put("isExisted", count > 0);
-        return R.ok(data);
+        return R.ok(Map.of("isRegistered", count > 0));
     }
 }

@@ -18,29 +18,29 @@ public class R<T> {
     public R() {
     }
 
-    protected static <T> R<T> build(T data) {
-        R<T> res = new R<>();
-        if (data != null) {
-            res.setResult(data);
+    protected static <T> R<T> build(T body) {
+        R<T> response = new R<>();
+        if (body != null) {
+            response.setResult(body);
         }
-        return res;
+        return response;
     }
 
     public static <T> R<T> build(T body, ResultCodeEnum resultCodeEnum) {
-        R<T> res = build(body);
-        res.setErrorCode(resultCodeEnum.getErrorCode());
-        return res;
+        R<T> response = build(body);
+        response.setErrorCode(resultCodeEnum.getErrorCode());
+        return response;
     }
 
-    public static <T> R<T> ok(T data) {
-        return build(data, ResultCodeEnum.SUCCESS);
+    public static <T> R<T> ok(T body) {
+        return build(body, ResultCodeEnum.SUCCESS);
     }
 
     public static <T> R<T> fail(ResultCodeEnum resultCodeEnum) {
-        R<T> r = new R<>();
-        r.setErrorCode(resultCodeEnum.getErrorCode());
-        r.setMessage(resultCodeEnum.getMessage());
-        return r;
+        R<T> response = new R<>();
+        response.setErrorCode(resultCodeEnum.getErrorCode());
+        response.setMessage(resultCodeEnum.getMessage());
+        return response;
     }
 
     public R<T> errorCode(Integer errorCode) {
@@ -60,8 +60,8 @@ public class R<T> {
         return result;
     }
 
-    public void setResult(T data) {
-        this.result = data;
+    public void setResult(T result) {
+        this.result = result;
     }
 
     public String getMessage() {

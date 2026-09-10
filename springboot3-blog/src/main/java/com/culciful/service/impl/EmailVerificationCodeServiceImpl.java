@@ -36,14 +36,14 @@ public class EmailVerificationCodeServiceImpl implements EmailVerificationCodeSe
     @Override
     public String sendCode(String email, String scene, String requestIp) {
         String normalizedScene = normalizeScene(scene);
-        boolean emailExists = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
+        boolean isEmailRegistered = userInfoMapper.selectCount(new LambdaQueryWrapper<UserInfo>()
                 .eq(UserInfo::getEmail, email)
                 .eq(UserInfo::getIsDeleted, false)) > 0;
         // register / update_email：目标邮箱不能已被占用；reset：目标邮箱必须存在
-        if ((SCENE_REGISTER.equals(normalizedScene) || SCENE_UPDATE_EMAIL.equals(normalizedScene)) && emailExists) {
+        if ((SCENE_REGISTER.equals(normalizedScene) || SCENE_UPDATE_EMAIL.equals(normalizedScene)) && isEmailRegistered) {
             return "EMAIL_USED";
         }
-        if (SCENE_RESET_PASSWORD.equals(normalizedScene) && !emailExists) {
+        if (SCENE_RESET_PASSWORD.equals(normalizedScene) && !isEmailRegistered) {
             return "EMAIL_NOT_FOUND";
         }
 
@@ -62,25 +62,25 @@ public class EmailVerificationCodeServiceImpl implements EmailVerificationCodeSe
 
         // 2. 同邮箱当日总量
         LocalDateTime dayStart = LocalDate.now().atStartOfDay();
-        long emailToday = emailVerificationCodeMapper.selectCount(new LambdaQueryWrapper<EmailVerificationCode>()
+        long emailSendsToday = emailVerificationCodeMapper.selectCount(new LambdaQueryWrapper<EmailVerificationCode>()
                 .eq(EmailVerificationCode::getEmail, email)
                 .ge(EmailVerificationCode::getCreatedAt, dayStart));
-        if (emailToday >= properties.getPerEmailDailyLimit()) {
+        if (emailSendsToday >= properties.getPerEmailDailyLimit()) {
             return RATE_LIMIT;
         }
 
         // 3. 同 IP 每小时 / 每日总量
         if (requestIp != null && !requestIp.isBlank()) {
-            long ipLastHour = emailVerificationCodeMapper.selectCount(new LambdaQueryWrapper<EmailVerificationCode>()
+            long ipSendsLastHour = emailVerificationCodeMapper.selectCount(new LambdaQueryWrapper<EmailVerificationCode>()
                     .eq(EmailVerificationCode::getRequestIp, requestIp)
                     .ge(EmailVerificationCode::getCreatedAt, now.minusHours(1)));
-            if (ipLastHour >= properties.getPerIpHourlyLimit()) {
+            if (ipSendsLastHour >= properties.getPerIpHourlyLimit()) {
                 return RATE_LIMIT;
             }
-            long ipToday = emailVerificationCodeMapper.selectCount(new LambdaQueryWrapper<EmailVerificationCode>()
+            long ipSendsToday = emailVerificationCodeMapper.selectCount(new LambdaQueryWrapper<EmailVerificationCode>()
                     .eq(EmailVerificationCode::getRequestIp, requestIp)
                     .ge(EmailVerificationCode::getCreatedAt, dayStart));
-            if (ipToday >= properties.getPerIpDailyLimit()) {
+            if (ipSendsToday >= properties.getPerIpDailyLimit()) {
                 return RATE_LIMIT;
             }
         }
@@ -103,18 +103,18 @@ public class EmailVerificationCodeServiceImpl implements EmailVerificationCodeSe
 
     @Override
     public boolean verifyCode(String email, String code, String scene) {
-        return check(email, code, scene, false);
+        return matchCode(email, code, scene, false);
     }
 
     @Override
     public boolean consumeCode(String email, String code, String scene) {
-        return check(email, code, scene, true);
+        return matchCode(email, code, scene, true);
     }
 
     /**
-     * @param consume true 则校验通过后标记为已用
+     * @param shouldConsume true 则校验通过后标记为已用
      */
-    private boolean check(String email, String code, String scene, boolean consume) {
+    private boolean matchCode(String email, String code, String scene, boolean shouldConsume) {
         EmailVerificationCode entity = latestValid(email, scene);
         if (entity == null) {
             return false;
@@ -126,7 +126,7 @@ public class EmailVerificationCodeServiceImpl implements EmailVerificationCodeSe
                     .eq(EmailVerificationCode::getId, entity.getId()));
             return false;
         }
-        if (consume) {
+        if (shouldConsume) {
             // 条件更新 + 行数校验：并发下同一验证码只能被消费一次
             int updated = emailVerificationCodeMapper.update(null, new LambdaUpdateWrapper<EmailVerificationCode>()
                     .set(EmailVerificationCode::getUsedAt, LocalDateTime.now())

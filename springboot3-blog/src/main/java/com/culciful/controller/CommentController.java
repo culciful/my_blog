@@ -60,7 +60,7 @@ public class CommentController {
     private final ImageStorageService imageStorageService;
 
     @PostMapping("/getCommentInbox")
-    public R<Map<String, Object>> inbox(@RequestBody @Valid PageSearchRequest request) {
+    public R<Map<String, Object>> getCommentInbox(@RequestBody @Valid PageSearchRequest request) {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -76,7 +76,7 @@ public class CommentController {
     }
 
     @PostMapping("/getComments")
-    public R<Map<String, Object>> search(@RequestBody @Valid CommentSearchRequest request) {
+    public R<Map<String, Object>> getComments(@RequestBody @Valid CommentSearchRequest request) {
         Long aid = request.aid();
         if (aid == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
@@ -93,9 +93,9 @@ public class CommentController {
         }
         Page<BlogComment> page = blogCommentMapper.selectPage(new Page<>(request.safeCurrentPage(), request.safePageSize()), wrapper);
         // 列根评论时，每条带前 PREVIEW_REPLIES 条子回复；列某根评论的回复时不再嵌套
-        boolean listingRoots = (root == null);
+        boolean isListingRoots = (root == null);
         List<Map<String, Object>> list = page.getRecords().stream()
-                .map(c -> commentItem(c, listingRoots))
+                .map(c -> commentItem(c, isListingRoots))
                 .toList();
         return R.ok(Map.of("list", list, "total", page.getTotal()));
     }
@@ -113,7 +113,7 @@ public class CommentController {
 
     @PostMapping("/addComment")
     @Transactional
-    public R<Map<String, Object>> add(@RequestBody @Valid CommentRequest request) {
+    public R<Map<String, Object>> addComment(@RequestBody @Valid CommentRequest request) {
         Long selfId = currentUserId();
         Long aid = request.aid();
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
@@ -136,7 +136,7 @@ public class CommentController {
         comment.setUserId(selfId);
         comment.setBlogId(aid);
         comment.setAuthorId(blog.getUserId());
-        comment.setIsMarkdown(Boolean.TRUE.equals(request.useMD()));
+        comment.setIsMarkdown(Boolean.TRUE.equals(request.isMarkdown()));
         comment.setContentTextId(insertText(request.msg()));
         comment.setParentId(parentId);
         comment.setRootId(rootId);
@@ -151,7 +151,7 @@ public class CommentController {
     }
 
     @PostMapping("/editComment")
-    public R<Void> edit(@RequestBody @Valid CommentRequest request) {
+    public R<Void> editComment(@RequestBody @Valid CommentRequest request) {
         Long selfId = currentUserId();
         Long aid = request.aid();
         Long cid = request.cid();
@@ -176,14 +176,14 @@ public class CommentController {
         text.setBody(request.msg());
         text.setContentHash(sha256(request.msg()));
         textBodyMapper.updateById(text);
-        comment.setIsMarkdown(Boolean.TRUE.equals(request.useMD()));
+        comment.setIsMarkdown(Boolean.TRUE.equals(request.isMarkdown()));
         comment.setUpdatedAt(LocalDateTime.now());
         blogCommentMapper.updateById(comment);
         return R.ok(null);
     }
 
     @PostMapping("/deleteComment")
-    public R<Void> delete(@RequestBody @Valid CommentRefRequest request) {
+    public R<Void> deleteComment(@RequestBody @Valid CommentRefRequest request) {
         Long selfId = currentUserId();
         Long aid = request.aid();
         Long cid = request.cid();
@@ -220,20 +220,20 @@ public class CommentController {
         m.put("aid", comment.getBlogId());
         m.put("authorId", comment.getAuthorId());
         m.put("title", blog == null ? "" : blog.getTitle());
-        m.put("createTime", epoch(comment.getCreatedAt()));
-        m.put("updateTime", epoch(comment.getUpdatedAt()));
-        m.put("useMD", Boolean.TRUE.equals(comment.getIsMarkdown()));
+        m.put("createTime", toEpochSeconds(comment.getCreatedAt()));
+        m.put("updateTime", toEpochSeconds(comment.getUpdatedAt()));
+        m.put("isMarkdown", Boolean.TRUE.equals(comment.getIsMarkdown()));
         // content.member = 「回复的回复」时被 @ 的人（即父评论作者）；父评论即使被删也照常显示 @
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("msg", text == null ? "" : text.getBody());
         if (comment.getParentId() != null && !comment.getParentId().equals(comment.getRootId())) {
             Long parentAuthorId = blogCommentMapper.selectAuthorIdIgnoreDeleted(comment.getParentId());
             if (parentAuthorId != null) {
-                content.put("member", member(parentAuthorId));
+                content.put("member", memberCard(parentAuthorId));
             }
         }
         m.put("content", content);
-        m.put("member", member(comment.getUserId()));
+        m.put("member", memberCard(comment.getUserId()));
         m.put("parent", comment.getParentId());
         m.put("parentContent", parentContent(comment.getParentId()));
         m.put("root", comment.getRootId());
@@ -281,7 +281,7 @@ public class CommentController {
         return Map.of("msg", text == null ? "" : text.getBody());
     }
 
-    private Map<String, Object> member(Long userId) {
+    private Map<String, Object> memberCard(Long userId) {
         UserInfo user = userInfoMapper.selectById(userId);
         if (user == null) {
             return Map.of("id", userId);
@@ -319,7 +319,7 @@ public class CommentController {
         return longValue(auth.getName());
     }
 
-    private long epoch(LocalDateTime time) {
+    private long toEpochSeconds(LocalDateTime time) {
         return time == null ? 0L : time.atZone(ZoneId.systemDefault()).toEpochSecond();
     }
 
