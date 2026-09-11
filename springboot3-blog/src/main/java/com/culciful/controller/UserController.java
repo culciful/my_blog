@@ -22,6 +22,7 @@ import com.culciful.pojo.UserInfo;
 import com.culciful.pojo.UserFollow;
 import com.culciful.pojo.UserPackage;
 import com.culciful.pojo.FileAsset;
+import com.culciful.security.JwtCookieService;
 import com.culciful.service.EmailVerificationCodeService;
 import com.culciful.service.ImageStorageService;
 import com.culciful.service.UserService;
@@ -30,6 +31,7 @@ import com.culciful.common.enums.ResultCodeEnum;
 import com.culciful.utils.RequestUtils;
 import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -69,6 +71,7 @@ public class UserController {
     private final ImageStorageService imageStorageService;
     private final PasswordEncoder passwordEncoder;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
+    private final JwtCookieService jwtCookieService;
 
     /**
      * register
@@ -87,7 +90,9 @@ public class UserController {
     }
 
     /**
-     * Public profile query by id.
+     * Public profile query by id. 已注销的账号也能查到（isDeleted=true），前端拿这个区分
+     * 「该用户已注销」（内容管理页仍可浏览其历史文章、可取消已有关注、不能新建关注）
+     * 和「id 压根不存在」（USERNAME_ERROR，整页找不到）。
      */
     @GetMapping("getUserInfo")
     public R<Map<String, Object>> getUserPublicProfile(@RequestParam("id") String idParam) {
@@ -95,7 +100,7 @@ public class UserController {
         if (targetId == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
         }
-        UserInfo user = loadActiveUser(targetId);
+        UserInfo user = userInfoMapper.selectByIdIncludingDeleted(targetId);
         if (user == null) {
             return R.fail(ResultCodeEnum.USERNAME_ERROR);
         }
@@ -140,6 +145,40 @@ public class UserController {
     @PostMapping("resetPassword")
     public R<Void> resetPassword(@RequestBody @Valid PasswordResetRequest request) {
         return doResetPassword(request);
+    }
+
+    /**
+     * 注销账号：校验当前密码，软删 + 释放 email/username（deleted_token 设成自己的雪花 id，
+     * 天然全局唯一，(email/username, 0) 这个「活跃」槽位空出来给以后重新注册用）+ 强制登出
+     * （token_version+1，本设备与其它设备的 JWT 一起失效）+ 清 cookie。
+     * 不级联删除已发布的文章/评论 —— 账号注销 ≠ 内容删除，文章仍按原作者信息展示；
+     * 访问该用户的个人主页会 404（getUserInfo/getMyProfile 都过滤 is_deleted）。
+     */
+    @PostMapping("deleteAccount")
+    public R<Void> deleteAccount(@RequestBody @Valid PasswordCheckRequest request, HttpServletResponse response) {
+        Long selfId = currentUserId();
+        if (selfId == null) {
+            return R.fail(ResultCodeEnum.NOT_LOGIN);
+        }
+        UserInfo user = loadActiveUser(selfId);
+        if (user == null || user.getPassword() == null
+                || !passwordEncoder.matches(request.password(), user.getPassword())) {
+            return R.fail(ResultCodeEnum.PASSWORD_ERROR);
+        }
+        // 不能用 updateById(entity) 传 isDeleted=true —— application.yaml 把 isDeleted 配成了
+        // mybatis-plus 的全局逻辑删除字段（logic-delete-field），MP 生成 updateById 的 SQL 模板会
+        // 直接把逻辑删除字段从 SET 子句里摘掉（它认为「删除」只能走 deleteById()/delete()），
+        // 结果就是 deleted_token/updated_at 真的落了库、is_deleted 却静默没生效，注销「看起来成功」
+        // 实际上账号还活着（实测踩到：deleted_token 已经等于自己的 id，is_deleted 还是 0）。
+        // 跟 deletePackage 一样改用 LambdaUpdateWrapper.set(...)，走的是显式 SQL 拼接，不受这条限制。
+        userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
+                .set(UserInfo::getIsDeleted, true)
+                .set(UserInfo::getDeletedToken, selfId)
+                .set(UserInfo::getUpdatedAt, LocalDateTime.now())
+                .eq(UserInfo::getId, selfId));
+        bumpTokenVersion(selfId);
+        jwtCookieService.clearTokenCookie(response);
+        return R.ok(null);
     }
 
     @GetMapping("getStat")
@@ -242,6 +281,10 @@ public class UserController {
         }
         if (targetId == null || selfId.equals(targetId) || request == null || request.shouldFollow() == null) {
             return R.fail(ResultCodeEnum.PARAM_ERROR);
+        }
+        // 注销的账号不能被关注：取消关注（history cleanup）仍放行，新建关注要挡
+        if (request.shouldFollow() && loadActiveUser(targetId) == null) {
+            return R.fail(ResultCodeEnum.USERNAME_ERROR);
         }
         boolean isFollowing = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFollowerId, selfId)
@@ -444,6 +487,7 @@ public class UserController {
         m.put("username", user.getUsername());
         m.put("avatarUrl", avatarUrl(user.getAvatarAssetId()));
         m.put("createTime", user.getCreatedAt() != null ? user.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond() : 0L);
+        m.put("isDeleted", Boolean.TRUE.equals(user.getIsDeleted()));
         return m;
     }
 

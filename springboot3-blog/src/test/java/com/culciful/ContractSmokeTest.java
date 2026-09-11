@@ -1,11 +1,21 @@
 package com.culciful;
 
+import com.culciful.config.JwtCookieProperties;
+import com.culciful.mapper.UserInfoMapper;
+import com.culciful.pojo.UserInfo;
+import com.culciful.security.token.JwtHelper;
+import com.culciful.utils.SnowflakeIdGenerator;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -20,6 +30,16 @@ class ContractSmokeTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private UserInfoMapper userInfoMapper;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private JwtHelper jwtHelper;
+    @Autowired
+    private JwtCookieProperties jwtCookieProperties;
+    @Autowired
+    private SnowflakeIdGenerator snowflakeIdGenerator;
 
     @Test
     void articleWriteRequiresAuthentication() throws Exception {
@@ -92,6 +112,53 @@ class ContractSmokeTest {
                         .content("{\"currentPassword\":\"Test1234\",\"newPassword\":\"NewPass12\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    @Test
+    void deleteAccountRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/user/deleteAccount")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"Test1234\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value(-10004));
+    }
+
+    /**
+     * 直接打真实接口，落库校验 is_deleted 真的生效——这个坑就是靠 SQL 手测躲过去的：
+     * application.yaml 把 isDeleted 配成了 mybatis-plus 全局逻辑删除字段，MP 生成
+     * updateById(entity) 的 SQL 模板会把逻辑删除字段整个从 SET 子句摘掉，entity 里手动
+     * set(true) 静默不生效；只有走 LambdaUpdateWrapper.set(...) 显式拼 SQL 才是真的。
+     */
+    @Test
+    void deleteAccountActuallyPersistsSoftDelete() throws Exception {
+        long id = snowflakeIdGenerator.nextId();
+        UserInfo user = new UserInfo();
+        user.setId(id);
+        user.setEmail("delacct-contract-" + id + "@example.com");
+        user.setUsername("delacct" + (id % 1_000_000));
+        user.setPassword(passwordEncoder.encode("Test12345"));
+        user.setArticleCount(0);
+        user.setFollowingCount(0);
+        user.setFollowerCount(0);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        user.setIsDeleted(false);
+        user.setDeletedToken(0L);
+        user.setTokenVersion(0L);
+        userInfoMapper.insert(user);
+
+        String jwt = jwtHelper.createToken(id, 0L);
+        mockMvc.perform(post("/user/deleteAccount")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"Test12345\"}")
+                        .cookie(new Cookie(jwtCookieProperties.getName(), jwt)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(0));
+
+        // 全局逻辑删除下 selectById 会自动过滤掉软删的行——查不到就是最直接的证明，
+        // 跟 loadActiveUser()/authenticate() 依赖的是同一套过滤
+        UserInfo after = userInfoMapper.selectById(id);
+        Assertions.assertTrue(after == null || Boolean.TRUE.equals(after.getIsDeleted()));
     }
 
     @Test

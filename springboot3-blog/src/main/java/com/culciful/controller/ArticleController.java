@@ -403,7 +403,10 @@ public class ArticleController {
     }
 
     private Map<String, Object> memberCard(Long userId) {
-        UserInfo user = userInfoMapper.selectById(userId);
+        // 作者可能已经注销了——selectById 在全局逻辑删除下会把已注销用户当不存在过滤掉
+        // （文章不级联删，还得显示是谁写的），改用不受这层过滤影响的查询，
+        // 前端按 isDeleted 显示「该用户已注销」而不是拿 undefined 的 username 硬拼
+        UserInfo user = userInfoMapper.selectByIdIncludingDeleted(userId);
         if (user == null) {
             return Map.of("id", userId);
         }
@@ -411,6 +414,7 @@ public class ArticleController {
         m.put("id", user.getId());
         m.put("username", user.getUsername());
         m.put("avatarUrl", avatarUrl(user.getAvatarAssetId()));
+        m.put("isDeleted", Boolean.TRUE.equals(user.getIsDeleted()));
         return m;
     }
 
