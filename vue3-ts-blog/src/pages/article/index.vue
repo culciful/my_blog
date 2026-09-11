@@ -8,7 +8,7 @@
                 <div class="title">
                     <h1>{{article[ArticleConstant.title]}}</h1>
                     <div class="inline-container">
-                        <span class="clickable" @click="viewUser(router, article[ArticleConstant.author])">{{$t('label.author')+': '+article[ArticleConstant.author][ArticleConstant.username]}}</span>
+                        <span class="clickable" @click="viewUser(router, article[ArticleConstant.author])">{{$t('label.author')+': '+authorName}}</span>
                         <span>{{$t('label.posted')+transferTimestamp(article[ArticleConstant.createTime])}}</span>
                         <span>
                             <svg-icon name="view" size="16"></svg-icon>
@@ -105,7 +105,7 @@ import {setReactiveData, transferTimestamp} from '@/utils/utils';
 import {useRouter} from 'vue-router';
 import {useUserStore} from '@/stores/user';
 import i18n from '@/language/i18n';
-import {viewUser} from '@/model/user/constant';
+import UserConstant, {viewUser} from '@/model/user/constant';
 
 const props = defineProps<{
     articleId: number|string
@@ -130,6 +130,14 @@ let article = reactive({
 const isEdited = computed(() =>
     Number(article[ArticleConstant.updateTime]) - Number(article[ArticleConstant.createTime]) > 60
 );
+// 作者账号可能已经注销：不拿历史 username 硬显示，统一换成「该用户已注销」；
+// 点击还是能跳去 ta 的内容管理页看历史文章（member.id 还在，见 viewUser）
+const authorName = computed(() => {
+    const member = article[ArticleConstant.author];
+    if (!member || !member[UserConstant.username]) return '';
+    if (member[UserConstant.isDeleted]) return t('label.userDeactivated');
+    return member[UserConstant.username];
+});
 const isAuthor = computed(() =>
     userStore.isLoggedIn && String(article[ArticleConstant.author]?.[ArticleConstant.userId]) === String(userStore.id)
 );

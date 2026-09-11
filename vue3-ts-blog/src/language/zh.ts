@@ -8,6 +8,10 @@ export default {
         userCenter: '个人中心',
         manageContent: '内容管理',
         logout: '退出登陆',
+        deleteAccount: '注销账号',
+        dangerZone: '危险操作',
+        userNotFound: '该用户不存在',
+        userDeactivated: '该用户已注销',
         write: '写随笔',
         message: '消息',
         search: '搜索',
@@ -96,7 +100,9 @@ export default {
         verifyPassword: '请验证您的密码：',
         loginToComment: '请登录后发表评论',
         uploadAvatarText: '点击或拖动图片到此处',
-        uploadAvatarTip: '图片宽度*高度至少为150*150像素，大小不超过2MB'
+        uploadAvatarTip: '图片宽度*高度至少为150*150像素，大小不超过2MB',
+        deleteAccountWarning: '注销后无法恢复：账号将无法登录，用户名和邮箱会被释放、可被他人注册。已发布的文章和评论不会被删除，但你将无法再管理它们。确定要继续吗？',
+        deleteAccountConfirmPrompt: '请输入密码以确认注销：'
     },
     infoMessage: {
         deleteSuccess: '删除成功',
@@ -109,6 +115,7 @@ export default {
         confirmDeletePackage: '确定要删除{name}合集吗？',
         duplicateName: '名称重复',
         reLogin: '修改成功，请重新登录',
+        accountDeleted: '账号已注销',
         avatarFormat: '图片必须为JPG、PNG等格式',
         avatarNoFile: '请先选择图片文件',
         avatarSize: '图片大小不能超过2MB',

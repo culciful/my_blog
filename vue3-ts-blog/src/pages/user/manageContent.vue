@@ -1,11 +1,18 @@
 <template>
 <div class="container a-full a-p-lg">
-    <div class="main-container a-h-f">
+    <p v-if="userNotFound" class="a-ta-c a-m-lg a-font-body-1">{{$t('label.userNotFound')}}</p>
+    <div v-else class="main-container a-h-f">
         <div class="aside a-d-ib a-va-t a-mr-lg a-h-f">
             <div v-if="isVisitMode" class="user-panel a-pb-md a-bb-base">
                 <img :src="handleAvatar(userInfo[Constant.avatarUrl])" alt="">
-                <span class="a-font-label-1 a-m-h-xxs ellipsis">{{userInfo[Constant.username]}}</span>
-                <el-button :type="isFollowing?'info':'primary'" @click="switchFollow" :loading="isQuerying">
+                <span class="a-font-label-1 a-m-h-xxs ellipsis">
+                    {{isTargetDeleted ? $t('label.userDeactivated') : userInfo[Constant.username]}}
+                </span>
+                <!-- 注销账号不能被新关注（后端也拦了）；已经关注的还能取消，方便清理历史关注关系 -->
+                <el-button v-if="!isTargetDeleted || isFollowing"
+                           :type="isFollowing?'info':'primary'"
+                           @click="switchFollow"
+                           :loading="isQuerying">
                     <svg-icon class="a-mr-xxs" :name="isFollowing?'checkmark':'plus'"></svg-icon>
                     {{isFollowing?$t('label.following'):$t('label.follow')}}
                 </el-button>
@@ -95,6 +102,8 @@ const { t } = i18n.global as any;
 const userStore = useUserStore();
 
 const isVisitMode = ref(false);
+const userNotFound = ref(false);
+const isTargetDeleted = ref(false);
 let userInfo = reactive({
     [Constant.userId]: userStore.id,
     [Constant.username]: userStore.username,
@@ -221,6 +230,8 @@ onMounted(() => {
         if (isVisitMode.value) {
             userInfo[Constant.userId] = queriedId;
             try {
+                // 已注销的用户 getUserInfo 也查得到（isDeleted:true），只有 id 压根不存在才会 404 到 catch；
+                // 历史文章/合集仍然可以浏览，所以这里不能把「已注销」和「真不存在」当同一种情况处理
                 const res: { result: Record<string, unknown> } = await proxy.$request.get(
                     Constant.url.getUserInfo,
                     { [Constant.userId]: userInfo[Constant.userId] }
@@ -228,9 +239,11 @@ onMounted(() => {
                 const r = res.result;
                 userInfo[Constant.username] = r[Constant.username] as string;
                 userInfo[Constant.avatarUrl] = r[Constant.avatarUrl] as string;
+                isTargetDeleted.value = !!r[Constant.isDeleted];
             } catch {
-                userInfo[Constant.username] = '';
-                userInfo[Constant.avatarUrl] = '';
+                // id 真的查不到人：整页换成提示，不再往下拉 package/article/关注状态
+                userNotFound.value = true;
+                return;
             }
             if (localStorage.getItem(LOGIN_STATE)) {
                 checkFollow();

@@ -26,16 +26,15 @@
             </router-link>
         </div>
     </div>
-    <div class="edit a-mt-lg">
-        <p class="a-font-title-1 a-mb-lg">
+    <div class="a-m-v-lg">
+        <p class="a-font-title-1 a-mb-xxl">
             {{$t('label.userinfo')}}
         </p>
         <el-form
             :model="userForm"
             :rules="rules"
             label-width="96px"
-            ref="userFormRef"
-            class="a-mt-xxl">
+            ref="userFormRef">
             <template v-if="editContent==='username'">
                 <el-form-item prop="username" :label="$t('label.username')">
                     <el-input
@@ -120,17 +119,27 @@
             </el-form-item>
         </el-form>
     </div>
+    <div class="a-p-v-lg a-bt-base">
+        <p class="a-font-title-1 a-mb-xxl">{{$t('label.dangerZone')}}</p>
+        <div class="flex-center" >
+            <el-button type="danger" plain @click="onDeleteAccount">
+                {{$t('label.deleteAccount')}}
+            </el-button>
+        </div>
+    </div>
 </div>
 <check-pwd-dialog v-model="showCheckPwdDialog" @success="send"></check-pwd-dialog>
 <upload-avatar v-model="showUploadAvatar" @success="loadMyProfile"></upload-avatar>
+<delete-account-dialog v-model="showDeleteAccountDialog" @success="onAccountDeleted"></delete-account-dialog>
 </template>
 
 <script lang="ts" setup name="UserCenter">
 import CheckPwdDialog from './components/checkPwdDialog.vue';
 import UploadAvatar from './components/uploadAvatar.vue';
+import DeleteAccountDialog from './components/deleteAccountDialog.vue';
 import {getCurrentInstance, ref, reactive, onMounted} from 'vue';
 import {useUserStore} from '@/stores/user';
-import {ElMessageBox, FormInstance, FormRules} from 'element-plus';
+import {ElMessage, ElMessageBox, FormInstance, FormRules} from 'element-plus';
 import i18n from '@/language/i18n';
 import {setReactiveData, transferTimestamp} from '@/utils/utils';
 import {globalRules} from '@/utils/validate';
@@ -302,6 +311,21 @@ const reLogin = () => {
     });
 };
 
+const showDeleteAccountDialog = ref(false);
+
+// 警告 + 输密码两步都挪进 DeleteAccountDialog 组件自己的 template 了（不再借 ElMessageBox），
+// 这里只管开弹窗
+const onDeleteAccount = () => {
+    showDeleteAccountDialog.value = true;
+};
+
+// 密码校验 + 调 deleteAccount 都在 DeleteAccountDialog 组件里，这里只管「确认后要做什么」
+const onAccountDeleted = () => {
+    userStore.clear();
+    ElMessage.success(t('infoMessage.accountDeleted'));
+    location.href = '/';
+};
+
 const state = reactive({
     [Constant.followingCount]: 0,
     [Constant.followerCount]: 0,
@@ -391,4 +415,5 @@ body {
 .el-input {
     width: 200px;
 }
+
 </style>

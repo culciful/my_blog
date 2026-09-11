@@ -18,7 +18,7 @@
                     </h3>
                     <p v-if="item[ArticleConstant.abstract]" @click="viewArticle(item[ArticleConstant.articleId])" class="a-font-body-1 a-c-p a-m-v-xs">{{item[ArticleConstant.abstract]}}</p>
                     <footer class="inline-container">
-                        <span class="clickable" @click="item[ArticleConstant.author] && viewUser(router, item[ArticleConstant.author])">{{$t('label.author')+': '+(item[ArticleConstant.author]?.[ArticleConstant.username] ?? '')}}</span>
+                        <span class="clickable" @click="item[ArticleConstant.author] && viewUser(router, item[ArticleConstant.author])">{{$t('label.author')+': '+authorName(item)}}</span>
                         <span class="create-time">{{transferTimestamp(item[ArticleConstant.createTime])}}</span>
                         <span>
                             <svg-icon name="comment-filling" size="16"></svg-icon>
@@ -60,7 +60,7 @@ import ArticleConstant, {DRAFT_PID} from '@/model/article/constant';
 import {useRouter} from 'vue-router';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import i18n from '@/language/i18n';
-import {viewUser} from '@/model/user/constant';
+import UserConstant, {viewUser} from '@/model/user/constant';
 
 const props = defineProps<{
     keyword?: string,
@@ -81,6 +81,15 @@ let articleList = ref([]);
 
 // 选中「草稿箱」时整个列表切成草稿：换接口 + 链接指向 /draft/:id
 const isDraft = computed(() => props.packageId === DRAFT_PID);
+
+// 作者账号可能已经注销（后端 memberCard 仍会把历史 username 带回来，但注销了就不拿真名show，
+// 统一显示「该用户已注销」；点击还是能跳去 ta 的内容管理页看历史文章，member.id 还在）
+const authorName = (item) => {
+    const member = item[ArticleConstant.author];
+    if (!member) return '';
+    if (member[UserConstant.isDeleted]) return t('label.userDeactivated');
+    return member[UserConstant.username] ?? '';
+};
 
 const handleSizeChange = (val: number) => {
     pageSize.value = val;

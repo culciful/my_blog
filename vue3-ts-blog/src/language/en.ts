@@ -8,6 +8,10 @@ export default {
         userCenter: 'User Center',
         manageContent: 'Manage Content',
         logout: 'Log Out',
+        deleteAccount: 'Delete Account',
+        dangerZone: 'Danger Zone',
+        userNotFound: 'This user does not exist',
+        userDeactivated: 'This account has been deleted',
         write: 'write',
         message: 'message',
         search: 'search',
@@ -96,7 +100,9 @@ export default {
         verifyPassword: 'Please verify your password:',
         loginToComment: 'Please log in to post a comment',
         uploadText: 'Drop file here or click to upload',
-        uploadAvatarTip: 'a image with at least 150*150 pixels and a size less than 2 MB'
+        uploadAvatarTip: 'a image with at least 150*150 pixels and a size less than 2 MB',
+        deleteAccountWarning: 'This cannot be undone: your account will be signed out and can no longer log in, and your username and email will be released for others to register. Published articles and comments will not be deleted, but you will no longer be able to manage them. Continue?',
+        deleteAccountConfirmPrompt: 'Enter your password to confirm account deletion:'
     },
     infoMessage: {
         deleteSuccess: 'deleted successfully',
@@ -109,6 +115,7 @@ export default {
         confirmDeletePackage: 'Are you sure you want to delete {name} collection?',
         duplicateName: 'duplicate name',
         reLogin: 'Modification successful, please log in again',
+        accountDeleted: 'Account deleted',
         avatarFormat: 'Avatar picture must be JPG/PNG format!',
         avatarNoFile: 'Please choose an image file first.',
         avatarSize: 'Avatar picture size can not exceed 2MB!',
