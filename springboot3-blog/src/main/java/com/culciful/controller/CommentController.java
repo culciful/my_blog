@@ -144,8 +144,10 @@ public class CommentController {
         comment.setUpdatedAt(LocalDateTime.now());
         comment.setIsDeleted(false);
         blogCommentMapper.insert(comment);
+        // 评论（含楼中楼回复）刷新文章最后互动时间 → 主页 feed 会把它顶上去
         blogMapper.update(null, new LambdaUpdateWrapper<Blog>()
                 .setSql("comment_count = comment_count + 1")
+                .set(Blog::getLastActiveAt, LocalDateTime.now())
                 .eq(Blog::getId, aid));
         return R.ok(Map.of("cid", comment.getId()));
     }

@@ -1,5 +1,6 @@
 package com.culciful.pojo;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -53,6 +54,15 @@ public class Blog {
     private Boolean isCustomAbstract;
 
     /**
+     * 正文第一张图片 URL（{@link com.culciful.utils.ArticleCover}），列表缩略图用；没图为 null。
+     * 每次发布/编辑正文都会重算，作者不能自定义。
+     * updateStrategy=IGNORED：编辑时可能把图删没了（值变回 null），MP 默认 NOT_NULL 策略会跳过
+     * null 字段、导致旧封面残留 —— 这个字段的 update 必须无条件带上，哪怕是 null。
+     */
+    @TableField(value = "cover_url", updateStrategy = FieldStrategy.IGNORED)
+    private String coverUrl;
+
+    /**
      * 发布状态：{@code draft} 草稿（仅作者可见，不进公开列表/详情、不计入 article_count）/
      * {@code published} 已发布。
      */
@@ -94,6 +104,13 @@ public class Blog {
      */
     @TableField("updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * 最后互动时间 (UTC)：发布 / 编辑正文 / 收到新评论都会刷新。
+     * 主页 feed 按它倒序（编辑或被评论会把文章顶上去）；作者维度的列表仍按 created_at。
+     */
+    @TableField("last_active_at")
+    private LocalDateTime lastActiveAt;
 
     /**
      * Deleted flag

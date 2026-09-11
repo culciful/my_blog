@@ -24,6 +24,7 @@ import com.culciful.pojo.UserInfo;
 import com.culciful.pojo.UserPackage;
 import com.culciful.service.ImageStorageService;
 import com.culciful.utils.ArticleAbstract;
+import com.culciful.utils.ArticleCover;
 import com.culciful.utils.SnowflakeIdGenerator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -80,8 +81,7 @@ public class ArticleController {
     public R<Map<String, Object>> getArticleList(@RequestBody @Valid PageSearchRequest request) {
         LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<Blog>()
                 .eq(Blog::getIsDeleted, false)
-                .eq(Blog::getStatus, STATUS_PUBLISHED)
-                .orderByDesc(Blog::getCreatedAt);
+                .eq(Blog::getStatus, STATUS_PUBLISHED);
         Map<String, Object> filter = request.safeFilter();
         String keyword = request.safeKeyword();
         if (!keyword.isEmpty()) {
@@ -90,6 +90,11 @@ public class ArticleController {
         Long userId = asLong(filter.get("id"));
         if (userId != null) {
             wrapper.eq(Blog::getUserId, userId);
+            // 作者维度（内容管理 / 个人空间）：稳定按发布时间倒序
+            wrapper.orderByDesc(Blog::getCreatedAt);
+        } else {
+            // 主页 feed：按最新互动倒序 —— 编辑或收到新评论会把文章顶上来
+            wrapper.orderByDesc(Blog::getLastActiveAt);
         }
         Long packageId = asLong(filter.get("pid"));
         if (packageId != null && packageId > 0) {
@@ -141,12 +146,14 @@ public class ArticleController {
         blog.setUserId(selfId);
         blog.setTitle(request.title());
         applyAbstract(blog, request);
+        blog.setCoverUrl(ArticleCover.firstImage(request.content()));
         blog.setContentTextId(textId);
         blog.setViewCount(0);
         blog.setCommentCount(0);
         blog.setPackageId(request.pid() == null || request.pid() == 0 ? null : request.pid());
         blog.setCreatedAt(LocalDateTime.now());
         blog.setUpdatedAt(LocalDateTime.now());
+        blog.setLastActiveAt(LocalDateTime.now());
         blog.setIsDeleted(false);
         blog.setStatus(STATUS_PUBLISHED);
         blogMapper.insert(blog);
@@ -182,8 +189,10 @@ public class ArticleController {
         textBodyMapper.updateById(text);
         blog.setTitle(request.title());
         applyAbstract(blog, request);
+        blog.setCoverUrl(ArticleCover.firstImage(request.content()));
         blog.setPackageId(request.pid() == null || request.pid() == 0 ? null : request.pid());
         blog.setUpdatedAt(LocalDateTime.now());
+        blog.setLastActiveAt(LocalDateTime.now());
         boolean promotingDraft = STATUS_DRAFT.equals(blog.getStatus());
         if (promotingDraft) {
             // 草稿 → 发布：状态翻转，发布时间取现在，作者文章数 +1
@@ -236,6 +245,7 @@ public class ArticleController {
             textBodyMapper.updateById(text);
             draft.setTitle(request.title());
             applyAbstract(draft, request);
+            draft.setCoverUrl(ArticleCover.firstImage(request.content()));
             draft.setPackageId(pkg);
             draft.setUpdatedAt(LocalDateTime.now());
             blogMapper.updateById(draft);
@@ -250,12 +260,14 @@ public class ArticleController {
         blog.setUserId(selfId);
         blog.setTitle(request.title());
         applyAbstract(blog, request);
+        blog.setCoverUrl(ArticleCover.firstImage(request.content()));
         blog.setContentTextId(textId);
         blog.setViewCount(0);
         blog.setCommentCount(0);
         blog.setPackageId(pkg);
         blog.setCreatedAt(LocalDateTime.now());
         blog.setUpdatedAt(LocalDateTime.now());
+        blog.setLastActiveAt(LocalDateTime.now());
         blog.setIsDeleted(false);
         blog.setStatus(STATUS_DRAFT);
         blogMapper.insert(blog);
@@ -362,6 +374,7 @@ public class ArticleController {
         m.put("viewCount", blog.getViewCount() == null ? 0 : blog.getViewCount());
         m.put("commentCount", blog.getCommentCount() == null ? 0 : blog.getCommentCount());
         m.put("abstract", blog.getAbstractText());
+        m.put("coverUrl", blog.getCoverUrl());
         return m;
     }
 
