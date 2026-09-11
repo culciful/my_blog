@@ -1,4 +1,7 @@
 import './style/global.scss';
+// vite-plugin-svg-icons 的虚拟模块：副作用 import，运行时把生成好的雪碧图塞进 <body>，
+// 取代原来 vite.config.ts 里手写的 insertSvg() transformIndexHtml
+import 'virtual:svg-icons-register';
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
@@ -63,6 +66,18 @@ VueMarkdownEditor.use(createLineNumberPlugin());
 VueMarkdownEditor.use(createHighlightLinesPlugin());
 VueMarkdownEditor.use(createCopyCodePlugin());
 VueMarkdownEditor.use(createAlignPlugin());
+
+// v-md-editor 内置 js-xss 白名单为了让 KaTeX 自己画的 sqrt/大括号等 <svg><path> 能过滤器，
+// 默认放行了一整套 svg 标签，里面混进了 foreignObject/use/image/feImage/animate*/set/cursor ——
+// 这些标签会"渲染"自己 href 指向的内容，而 href/xlink:href 在这里只做了转义、没做协议/内容过滤。
+// 典型绕过：<svg><use href="data:image/svg+xml,<svg onload=alert(1)>..."/></svg>，
+// payload 整个藏在 data: URI 里，过滤器扫不到里面的 onload。评论支持 markdown、任何登录用户都能发，
+// 相当于对全站开放存储型 XSS。KaTeX 实际只用得到 svg/path/g/line/rect 等纯图形标签，删掉上面这批
+// "会取资源/执行内容"的标签，公式渲染不受影响，mermaid 走的是另一条不经过这个白名单的路径（见上）。
+// js-xss 内部把 whiteList 的 key 统一转成小写了（SVG 标签本身是 camelCase，比如 foreignObject/
+// feImage/animateTransform）—— 这里必须用小写 key 删，用原始大小写删是静默无效的（踩过一次坑）。
+['foreignobject', 'use', 'image', 'feimage', 'animate', 'animatecolor', 'animatemotion', 'animatetransform', 'set', 'cursor']
+    .forEach(tag => { delete VueMarkdownEditor.xss.options.whiteList[tag]; });
 
 if(lang !== defaultLanguage) {
     VueMarkdownEditor.lang.use('en-US', enUS);

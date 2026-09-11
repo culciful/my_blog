@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-svg-icons/client" />
 
 interface ImportMetaEnv {
     readonly VITE_USE_MOCK?: string;

@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { insertSvg } from './src/utils/insertSvg';
+import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 import { mockServer } from './src/utils/mockServer';
 /* 允许setup内设置组件name */
 import vueSetupExtend from 'unplugin-vue-setup-extend-plus/vite';
@@ -14,7 +14,12 @@ export default defineConfig(({ mode }) => {
 
     const plugins = [
         vue(),
-        insertSvg(),
+        // 图标雪碧图：扫 src/assets/img/icons 自动生成，开发时监听目录、生产随 build 一起出，
+        // 不再需要手动跑脚本、也不再有提交进 git 的派生 svg 文件（原 generateSVG.cjs + insertSvg.ts 已删）
+        createSvgIconsPlugin({
+            iconDirs: [fileURLToPath(new URL('./src/assets/img/icons', import.meta.url))],
+            symbolId: 'icon-[name]'
+        }),
         vueSetupExtend({ /* options */ }),
         prismjsPlugin({
             languages: [

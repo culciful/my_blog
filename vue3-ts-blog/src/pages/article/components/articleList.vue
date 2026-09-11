@@ -2,32 +2,39 @@
     <template v-if="totalCount>0">
         <div class="article-container">
             <article class="a-mt-md a-pb-sm" v-for="item in articleList" :key="item[ArticleConstant.articleId]">
-                <h3 class="a-font-title-1 a-pos-r a-pr-lg">
-                    <router-link :to="`${isDraft ? '/draft/' : '/article/'}${item[ArticleConstant.articleId]}`">{{item[ArticleConstant.title]}}</router-link>
-                    <el-dropdown placement="bottom-end" class="more" v-if="enableOperate">
-                        <svg-icon name="more" size="16"></svg-icon>
-                        <template #dropdown>
-                            <el-dropdown-menu>
-                                <el-dropdown-item v-for="(value, key) in operateOptions" :key="key" @click="()=>{value(item[ArticleConstant.articleId])}">
-                                    {{$t('label.'+key)}}
-                                </el-dropdown-item>
-                            </el-dropdown-menu>
-                        </template>
-                    </el-dropdown>
-                </h3>
-                <p v-if="item[ArticleConstant.abstract]" @click="viewArticle(item[ArticleConstant.articleId])" class="a-font-body-1 a-c-p a-m-v-xs">{{item[ArticleConstant.abstract]}}</p>
-                <footer class="inline-container">
-                    <span class="clickable" @click="item[ArticleConstant.author] && viewUser(router, item[ArticleConstant.author])">{{$t('label.author')+': '+(item[ArticleConstant.author]?.[ArticleConstant.username] ?? '')}}</span>
-                    <span class="create-time">{{transferTimestamp(item[ArticleConstant.createTime])}}</span>
-                    <span>
-                        <svg-icon name="comment-filling" size="16"></svg-icon>
-                        {{item[ArticleConstant.commentCount] ?? 0}}
-                    </span>
-                    <span>
-                        <svg-icon name="view" size="16"></svg-icon>
-                        {{item[ArticleConstant.viewCount] ?? 0}}
-                    </span>
-                </footer>
+                <div class="content">
+                    <h3 class="a-font-title-1 a-pos-r a-pr-lg">
+                        <router-link :to="`${isDraft ? '/draft/' : '/article/'}${item[ArticleConstant.articleId]}`">{{item[ArticleConstant.title]}}</router-link>
+                        <el-dropdown placement="bottom-end" class="more" v-if="enableOperate">
+                            <svg-icon name="more" size="16"></svg-icon>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item v-for="(value, key) in operateOptions" :key="key" @click="()=>{value(item[ArticleConstant.articleId])}">
+                                        {{$t('label.'+key)}}
+                                    </el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
+                    </h3>
+                    <p v-if="item[ArticleConstant.abstract]" @click="viewArticle(item[ArticleConstant.articleId])" class="a-font-body-1 a-c-p a-m-v-xs">{{item[ArticleConstant.abstract]}}</p>
+                    <footer class="inline-container">
+                        <span class="clickable" @click="item[ArticleConstant.author] && viewUser(router, item[ArticleConstant.author])">{{$t('label.author')+': '+(item[ArticleConstant.author]?.[ArticleConstant.username] ?? '')}}</span>
+                        <span class="create-time">{{transferTimestamp(item[ArticleConstant.createTime])}}</span>
+                        <span>
+                            <svg-icon name="comment-filling" size="16"></svg-icon>
+                            {{item[ArticleConstant.commentCount] ?? 0}}
+                        </span>
+                        <span>
+                            <svg-icon name="view" size="16"></svg-icon>
+                            {{item[ArticleConstant.viewCount] ?? 0}}
+                        </span>
+                    </footer>
+                </div>
+                <img v-if="item[ArticleConstant.coverUrl]"
+                     class="cover a-c-p"
+                     :src="item[ArticleConstant.coverUrl]"
+                     alt=""
+                     @click="viewArticle(item[ArticleConstant.articleId])">
             </article>
         </div>
         <div class="flex-center a-bt-base a-pt-lg" v-if="totalCount>pageSize">
@@ -140,7 +147,15 @@ const operateOptions = {
 <style scoped lang="scss">
 .article-container {
     article {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
         border-bottom: $--border;
+        .content {
+            flex: 1;
+            min-width: 0;
+        }
         h3 {
             a {
                 color: $--text-color;
@@ -149,11 +164,25 @@ const operateOptions = {
                 color: $--color-primary-dark-2;
             }
         }
+        .cover {
+            flex-shrink: 0;
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: $--bg-color-soft;
+        }
     }
 }
 .more {
     position: absolute;
     right: 0;
     top: 0;
+}
+@media (max-width: 480px) {
+    .article-container article .cover {
+        width: 72px;
+        height: 72px;
+    }
 }
 </style>
