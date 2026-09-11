@@ -42,7 +42,7 @@ jwt:
   cookie:
     name: ${JWT_COOKIE_NAME:BLOG_TOKEN}
     path: /
-    same-site: Lax
+    same-site: Strict
 
 # Cross-origin allowlist (dev). Prod same-site: keep empty -- see application-prod.yaml.
 blog:

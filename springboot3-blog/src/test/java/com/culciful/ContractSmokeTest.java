@@ -1,7 +1,11 @@
 package com.culciful;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.culciful.common.enums.AuditAction;
 import com.culciful.config.JwtCookieProperties;
+import com.culciful.mapper.AuditLogMapper;
 import com.culciful.mapper.UserInfoMapper;
+import com.culciful.pojo.AuditLog;
 import com.culciful.pojo.UserInfo;
 import com.culciful.security.token.JwtHelper;
 import com.culciful.utils.SnowflakeIdGenerator;
@@ -40,6 +44,8 @@ class ContractSmokeTest {
     private JwtCookieProperties jwtCookieProperties;
     @Autowired
     private SnowflakeIdGenerator snowflakeIdGenerator;
+    @Autowired
+    private AuditLogMapper auditLogMapper;
 
     @Test
     void articleWriteRequiresAuthentication() throws Exception {
@@ -159,6 +165,23 @@ class ContractSmokeTest {
         // 跟 loadActiveUser()/authenticate() 依赖的是同一套过滤
         UserInfo after = userInfoMapper.selectById(id);
         Assertions.assertTrue(after == null || Boolean.TRUE.equals(after.getIsDeleted()));
+    }
+
+    /** 登录失败要落一行 audit_log（GlobalExceptionHandler 那批日志兜底和这个是两件事：
+     *  一个是"出错了要留痕"，这个是"敏感操作不管成功失败都要留痕"）。 */
+    @Test
+    void loginFailureIsAudited() throws Exception {
+        String probeUsername = "audit-test-" + snowflakeIdGenerator.nextId();
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + probeUsername + "\",\"password\":\"WrongPass123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(-10014));
+
+        Long matched = auditLogMapper.selectCount(new LambdaQueryWrapper<AuditLog>()
+                .eq(AuditLog::getAction, AuditAction.LOGIN_FAILED.name())
+                .eq(AuditLog::getDetail, probeUsername));
+        Assertions.assertTrue(matched > 0);
     }
 
     @Test

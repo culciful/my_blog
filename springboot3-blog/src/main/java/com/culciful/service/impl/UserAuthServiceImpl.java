@@ -6,9 +6,11 @@ import com.culciful.mapper.UserInfoMapper;
 import com.culciful.pojo.UserInfo;
 import com.culciful.security.JwtCookieService;
 import com.culciful.security.LoginAttemptService;
+import com.culciful.service.AuditLogService;
 import com.culciful.service.UserAuthService;
 import com.culciful.security.token.JwtHelper;
 import com.culciful.common.api.R;
+import com.culciful.common.enums.AuditAction;
 import com.culciful.common.enums.ResultCodeEnum;
 import com.culciful.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,19 +32,24 @@ public class UserAuthServiceImpl implements UserAuthService {
     private final JwtCookieService jwtCookieService;
     private final PasswordEncoder passwordEncoder;
     private final LoginAttemptService loginAttemptService;
+    private final AuditLogService auditLogService;
 
     @Override
     public R<Map<String, Object>> login(LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse response) {
-        String attemptKey = loginAttemptService.key(request.username(), RequestUtils.clientIp(httpRequest));
+        String clientIp = RequestUtils.clientIp(httpRequest);
+        String attemptKey = loginAttemptService.key(request.username(), clientIp);
         if (loginAttemptService.isBlocked(attemptKey)) {
             return R.fail(ResultCodeEnum.LOGIN_LOCKED);
         }
         UserInfo user = authenticate(request.username(), request.password());
         if (user == null) {
             loginAttemptService.recordFailure(attemptKey);
+            // detail 只留提交的用户名/邮箱，不碰密码
+            auditLogService.record(AuditAction.LOGIN_FAILED, null, clientIp, request.username());
             return R.fail(ResultCodeEnum.LOGIN_FAILED);
         }
         loginAttemptService.reset(attemptKey);
+        auditLogService.record(AuditAction.LOGIN_SUCCESS, user.getId(), clientIp, null);
         long tv = user.getTokenVersion() == null ? 0L : user.getTokenVersion();
         String jwt = jwtHelper.createToken(user.getId(), tv);
         jwtCookieService.addTokenCookie(response, jwt, jwtHelper.cookieMaxAgeSeconds());

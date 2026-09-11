@@ -23,6 +23,8 @@ import com.culciful.pojo.UserFollow;
 import com.culciful.pojo.UserPackage;
 import com.culciful.pojo.FileAsset;
 import com.culciful.security.JwtCookieService;
+import com.culciful.common.enums.AuditAction;
+import com.culciful.service.AuditLogService;
 import com.culciful.service.EmailVerificationCodeService;
 import com.culciful.service.ImageStorageService;
 import com.culciful.service.UserService;
@@ -72,6 +74,7 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
     private final JwtCookieService jwtCookieService;
+    private final AuditLogService auditLogService;
 
     /**
      * register
@@ -137,14 +140,14 @@ public class UserController {
 
     /** 已登录改密码：校验当前密码，改完 token_version+1（其他设备踢下线，本设备也需重登） */
     @PostMapping("updatePassword")
-    public R<Void> updatePassword(@RequestBody @Valid PasswordUpdateRequest request) {
-        return doUpdatePassword(request);
+    public R<Void> updatePassword(@RequestBody @Valid PasswordUpdateRequest request, HttpServletRequest httpRequest) {
+        return doUpdatePassword(request, httpRequest);
     }
 
     /** 匿名忘记密码：邮箱验证码 + 新密码，改完 token_version+1 */
     @PostMapping("resetPassword")
-    public R<Void> resetPassword(@RequestBody @Valid PasswordResetRequest request) {
-        return doResetPassword(request);
+    public R<Void> resetPassword(@RequestBody @Valid PasswordResetRequest request, HttpServletRequest httpRequest) {
+        return doResetPassword(request, httpRequest);
     }
 
     /**
@@ -155,7 +158,7 @@ public class UserController {
      * 访问该用户的个人主页会 404（getUserInfo/getMyProfile 都过滤 is_deleted）。
      */
     @PostMapping("deleteAccount")
-    public R<Void> deleteAccount(@RequestBody @Valid PasswordCheckRequest request, HttpServletResponse response) {
+    public R<Void> deleteAccount(@RequestBody @Valid PasswordCheckRequest request, HttpServletRequest httpRequest, HttpServletResponse response) {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -178,6 +181,7 @@ public class UserController {
                 .eq(UserInfo::getId, selfId));
         bumpTokenVersion(selfId);
         jwtCookieService.clearTokenCookie(response);
+        auditLogService.record(AuditAction.ACCOUNT_DELETED, selfId, RequestUtils.clientIp(httpRequest), null);
         return R.ok(null);
     }
 
@@ -408,7 +412,7 @@ public class UserController {
         return R.ok(null);
     }
 
-    private R<Void> doUpdatePassword(PasswordUpdateRequest request) {
+    private R<Void> doUpdatePassword(PasswordUpdateRequest request, HttpServletRequest httpRequest) {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
@@ -422,10 +426,11 @@ public class UserController {
             return R.fail(ResultCodeEnum.PASSWORD_NOT_CHANGED);
         }
         applyNewPassword(selfId, request.newPassword());
+        auditLogService.record(AuditAction.PASSWORD_CHANGED, selfId, RequestUtils.clientIp(httpRequest), null);
         return R.ok(null);
     }
 
-    private R<Void> doResetPassword(PasswordResetRequest request) {
+    private R<Void> doResetPassword(PasswordResetRequest request, HttpServletRequest httpRequest) {
         if (!emailVerificationCodeService.consumeCode(
                 request.email(),
                 request.verificationCode(),
@@ -440,6 +445,7 @@ public class UserController {
             return R.fail(ResultCodeEnum.USERNAME_ERROR);
         }
         applyNewPassword(user.getId(), request.newPassword());
+        auditLogService.record(AuditAction.PASSWORD_RESET, user.getId(), RequestUtils.clientIp(httpRequest), null);
         return R.ok(null);
     }
 
