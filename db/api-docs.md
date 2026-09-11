@@ -61,6 +61,7 @@
 | `/user/checkPassword` | POST（json） | 校验当前用户密码 | `userCenter.vue`、`checkPwdDialog.vue` |
 | `/user/updatePassword` | POST（json） | **需登录**，校验当前密码后改密；改完 `token_version+1`，所有旧 token 失效 | `userCenter.vue` |
 | `/user/resetPassword` | POST（json） | **匿名**，邮箱验证码（scene=reset）+ 新密码；改完 `token_version+1` | `forgetPassword.vue` |
+| `/user/deleteAccount` | POST（json） | **需登录**，注销账号：校验密码 → 软删（释放 email/username 给以后重新注册）→ `token_version+1` 全设备登出 → 清 cookie。不级联删除已发布文章/评论 | `deleteAccountDialog.vue` |
 | `/user/getStat` | GET | 文章数/关注/粉丝 → `{ articleCount, followingCount, followerCount }` | `userCenter.vue` |
 | `/user/getFollowings` | POST | 分页查询关注列表 | `follow.vue` |
 | `/user/getFollowers` | POST | 分页查询粉丝列表 | `follow.vue` |
@@ -84,6 +85,17 @@
 `updatePassword` body：`{ currentPassword, newPassword }`（需登录）。当前密码错 → `-10006`；新密码与当前密码相同 → `-10016`。
 `resetPassword` body：`{ email, verificationCode, newPassword }`（匿名）。验证码错 → `-10012`；邮箱不存在 → `-10005`。
 > 改密 / 重置成功后 `token_version+1`，改密前签发的所有 JWT 立即失效 → 前端统一 `reLogin()`。
+
+`deleteAccount` body：`{ password }`（需登录）。密码错 → `-10006`。`user_info.deleted_token` 设成自己的雪花 id
+（天然唯一），`(email/username, 0)` 这个"活跃"槽位就空出来给以后重新注册。已注销用户 `getUserInfo`/`memberCard`
+仍能查到（`isDeleted:true`），前端据此显示"该用户已注销"而不是直接 404——历史文章仍可浏览，只是账号本身
+不可再登录/管理，也不能被新关注（`switchFollow` 会拒；取消已有关注不受影响）。
+
+**安全审计日志**（`audit_log` 表 + `AuditLogService`，2026-09-11）：登录成功/失败、改密（含重置）、注销账号
+都会落一行（`{ userId?, action, ip, detail?, createdAt }`），同时打一条 SLF4J INFO（`audit: action=... userId=...`）。
+`action` 取值：`LOGIN_SUCCESS` / `LOGIN_FAILED` / `PASSWORD_CHANGED` / `PASSWORD_RESET` / `ACCOUNT_DELETED`。
+`detail` 目前只在 `LOGIN_FAILED` 时填（提交的用户名/邮箱，不含密码）。写审计失败不影响主流程，只打 ERROR 日志。
+没有配套的查询接口/管理页，现在只能直接查库。
 
 **邮箱验证码加固**（`EmailVerificationCodeServiceImpl`，`blog.email-code.*` 可调）：
 > - 6 位数字、10 分钟有效、bcrypt 存哈希

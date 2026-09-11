@@ -8,6 +8,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `blog_tag_relation`;
 DROP TABLE IF EXISTS `blog_tag`;
 DROP TABLE IF EXISTS `email_verification_code`;
+DROP TABLE IF EXISTS `audit_log`;
 DROP TABLE IF EXISTS `blog_comment`;
 DROP TABLE IF EXISTS `blog`;
 DROP TABLE IF EXISTS `user_follow`;
@@ -168,6 +169,18 @@ CREATE TABLE `email_verification_code` (
   KEY `idx_ip_time` (`request_ip`, `created_at`),
   KEY `idx_expires_at` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='邮箱验证码表';
+
+CREATE TABLE `audit_log` (
+  `id` BIGINT UNSIGNED NOT NULL COMMENT '雪花ID',
+  `user_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '操作用户ID; 登录失败等场景可能识别不到用户, 为NULL',
+  `action` VARCHAR(32) NOT NULL COMMENT '事件类型: LOGIN_SUCCESS/LOGIN_FAILED/PASSWORD_CHANGED/PASSWORD_RESET/ACCOUNT_DELETED',
+  `ip` VARCHAR(45) DEFAULT NULL COMMENT '来源IP',
+  `detail` VARCHAR(255) DEFAULT NULL COMMENT '附加信息, 如登录失败时提交的用户名/邮箱',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间(UTC)',
+  PRIMARY KEY (`id`),
+  KEY `idx_audit_user` (`user_id`, `created_at`),
+  KEY `idx_audit_action` (`action`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='安全审计日志: 登录/改密/注销';
 
 ALTER TABLE `user_package`
   ADD CONSTRAINT `fk_package_user`
