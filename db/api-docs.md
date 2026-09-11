@@ -116,7 +116,9 @@
 | `/article/getTags` | GET | 标签列表 → `{ list: string[] }` | `addArticle.vue` |
 
 `getArticleList` body：`{ pageSize, currentPage, filter: { keyword?, id?（作者）, pid?（分组）, tag? } }`
-返回：`{ list: [{ aid, id, member:{id,username,avatarUrl}, title, createTime, viewCount, commentCount, abstract }], total }`
+返回：`{ list: [{ aid, id, member:{id,username,avatarUrl}, title, createTime, viewCount, commentCount, abstract, coverUrl }], total }`
+排序：带 `filter.id`（内容管理 / 个人空间）→ 按 `created_at` 倒序；不带（主页 feed）→ 按 `last_active_at` 倒序（发布 / 编辑正文 / 收到新评论都会刷新 `last_active_at`，把文章顶上来）。
+`coverUrl`：正文第一张图（`ArticleCover.firstImage`，只认 markdown `![](url)`，跳过代码块/公式块），发布/编辑正文时重算；没图为 `null`。主页列表用它渲染缩略图。
 
 `getArticleInfo` 返回（在列表项基础上多）：`{ ...列表项, updateTime, content, isCustomAbstract, pid, package:{pid,pname}, tags:string[], comments:{list,total} }`
 > `updateTime` = 文章最后编辑时间（秒）。浏览量自增不会改动它；仅 `editArticle` 会。
