@@ -52,24 +52,6 @@ public class UserInfo {
     private Long avatarAssetId;
 
     /**
-     * Cached article count
-     */
-    @TableField("article_count")
-    private Integer articleCount;
-
-    /**
-     * Cached following count
-     */
-    @TableField("following_count")
-    private Integer followingCount;
-
-    /**
-     * Cached follower count
-     */
-    @TableField("follower_count")
-    private Integer followerCount;
-
-    /**
      * Created time (UTC)
      */
     @TableField("created_at")

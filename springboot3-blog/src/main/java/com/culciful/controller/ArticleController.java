@@ -158,9 +158,6 @@ public class ArticleController {
         blog.setStatus(STATUS_PUBLISHED);
         blogMapper.insert(blog);
         replaceTags(blogId, request.tags());
-        userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
-                .setSql("article_count = article_count + 1")
-                .eq(UserInfo::getId, selfId));
         return R.ok(Map.of("id", blogId));
     }
 
@@ -193,27 +190,22 @@ public class ArticleController {
         blog.setPackageId(request.pid() == null || request.pid() == 0 ? null : request.pid());
         blog.setUpdatedAt(LocalDateTime.now());
         blog.setLastActiveAt(LocalDateTime.now());
-        boolean promotingDraft = STATUS_DRAFT.equals(blog.getStatus());
-        if (promotingDraft) {
-            // 草稿 → 发布：状态翻转，发布时间取现在，作者文章数 +1
+        if (STATUS_DRAFT.equals(blog.getStatus())) {
+            // 草稿 → 发布：状态翻转，发布时间取现在。文章数是实时 COUNT（见
+            // UserController.getMyStats），这里不用再手动 +1
             blog.setStatus(STATUS_PUBLISHED);
             blog.setCreatedAt(LocalDateTime.now());
         }
         blogMapper.updateById(blog);
         forceCoverUrl(blog);
         replaceTags(aid, request.tags());
-        if (promotingDraft) {
-            userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
-                    .setSql("article_count = article_count + 1")
-                    .eq(UserInfo::getId, selfId));
-        }
         return R.ok(Map.of("id", aid));
     }
 
     /**
      * 保存草稿：新建（无 aid）或更新自己的草稿（aid 指向自己的草稿行）。
      * 校验放松 —— 只要求标题非空，其余字段（正文/分组/标签/摘要）都可空，方便随手存。
-     * 不动 article_count（草稿不算已发布文章）。
+     * 文章数统计只算 status=published 的行，草稿不计入（见 UserController.getMyStats）。
      */
     @PostMapping("/saveDraft")
     @Transactional
@@ -347,12 +339,8 @@ public class ArticleController {
                 .set(Blog::getIsDeleted, true)
                 .set(Blog::getUpdatedAt, LocalDateTime.now())
                 .eq(Blog::getId, aid));
-        if (STATUS_PUBLISHED.equals(blog.getStatus())) {
-            // 草稿不计入 article_count，删草稿不用减
-            userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
-                    .setSql("article_count = greatest(article_count - 1, 0)")
-                    .eq(UserInfo::getId, selfId));
-        }
+        // 文章数是实时 COUNT（is_deleted=false 的行），软删之后这行自然不再计入，
+        // 不用手动维护计数
         return R.ok(null);
     }
 

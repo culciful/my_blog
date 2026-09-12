@@ -3,6 +3,7 @@ package com.culciful.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.culciful.mapper.BlogMapper;
 import com.culciful.mapper.UserInfoMapper;
 import com.culciful.mapper.UserFollowMapper;
 import com.culciful.mapper.UserPackageMapper;
@@ -18,6 +19,7 @@ import com.culciful.dto.PasswordResetRequest;
 import com.culciful.dto.PasswordUpdateRequest;
 import com.culciful.dto.RegisterRequest;
 import com.culciful.dto.UserUpdateRequest;
+import com.culciful.pojo.Blog;
 import com.culciful.pojo.UserInfo;
 import com.culciful.pojo.UserFollow;
 import com.culciful.pojo.UserPackage;
@@ -66,6 +68,7 @@ import java.util.Map;
 public class UserController {
     private final UserInfoMapper userInfoMapper;
     private final UserFollowMapper userFollowMapper;
+    private final BlogMapper blogMapper;
     private final UserPackageMapper userPackageMapper;
     private final FileAssetMapper fileAssetMapper;
     private final UserService userService;
@@ -75,6 +78,9 @@ public class UserController {
     private final SnowflakeIdGenerator snowflakeIdGenerator;
     private final JwtCookieService jwtCookieService;
     private final AuditLogService auditLogService;
+
+    // 跟 ArticleController.STATUS_PUBLISHED 保持一致的字面量（getMyStats 用，没抽公共常量类）
+    private static final String STATUS_PUBLISHED = "published";
 
     /**
      * register
@@ -185,14 +191,19 @@ public class UserController {
         return R.ok(null);
     }
 
+    /**
+     * 文章数/关注数/粉丝数：全部实时 COUNT，不走缓存字段。
+     */
     @GetMapping("getStat")
     public R<Map<String, Object>> getMyStats() {
         Long selfId = currentUserId();
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
-        Integer ownArticleCount = userInfoMapper.selectById(selfId).getArticleCount();
-        long articleCount = ownArticleCount == null ? 0 : ownArticleCount;
+        long articleCount = blogMapper.selectCount(new LambdaQueryWrapper<Blog>()
+                .eq(Blog::getUserId, selfId)
+                .eq(Blog::getIsDeleted, false)
+                .eq(Blog::getStatus, STATUS_PUBLISHED));
         long followingCount = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFollowerId, selfId));
         long followerCount = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()

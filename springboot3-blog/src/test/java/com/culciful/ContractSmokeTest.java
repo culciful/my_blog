@@ -8,8 +8,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.culciful.common.enums.AuditAction;
 import com.culciful.config.JwtCookieProperties;
 import com.culciful.mapper.AuditLogMapper;
+import com.culciful.mapper.BlogMapper;
+import com.culciful.mapper.TextBodyMapper;
+import com.culciful.mapper.UserFollowMapper;
 import com.culciful.mapper.UserInfoMapper;
 import com.culciful.pojo.AuditLog;
+import com.culciful.pojo.Blog;
+import com.culciful.pojo.TextBody;
+import com.culciful.pojo.UserFollow;
 import com.culciful.pojo.UserInfo;
 import com.culciful.security.token.JwtHelper;
 import com.culciful.utils.SnowflakeIdGenerator;
@@ -50,6 +56,12 @@ class ContractSmokeTest {
     private SnowflakeIdGenerator snowflakeIdGenerator;
     @Autowired
     private AuditLogMapper auditLogMapper;
+    @Autowired
+    private BlogMapper blogMapper;
+    @Autowired
+    private TextBodyMapper textBodyMapper;
+    @Autowired
+    private UserFollowMapper userFollowMapper;
 
     @Test
     void articleWriteRequiresAuthentication() throws Exception {
@@ -147,9 +159,6 @@ class ContractSmokeTest {
         user.setEmail("delacct-contract-" + id + "@example.com");
         user.setUsername("delacct" + (id % 1_000_000));
         user.setPassword(passwordEncoder.encode("Test12345"));
-        user.setArticleCount(0);
-        user.setFollowingCount(0);
-        user.setFollowerCount(0);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         user.setIsDeleted(false);
@@ -169,6 +178,84 @@ class ContractSmokeTest {
         // 跟 loadActiveUser()/authenticate() 依赖的是同一套过滤
         UserInfo after = userInfoMapper.selectById(id);
         Assertions.assertTrue(after == null || Boolean.TRUE.equals(after.getIsDeleted()));
+    }
+
+    /**
+     * getMyStats 三个数全部实时 COUNT：草稿不算文章数、软删的文章不算、关注/粉丝各按
+     * user_follow 里对应方向的行数
+     */
+    @Test
+    void myStatsCountsAreLiveNotCached() throws Exception {
+        long authorId = snowflakeIdGenerator.nextId();
+        long otherId = snowflakeIdGenerator.nextId();
+        insertTestUser(authorId, "stat-author");
+        insertTestUser(otherId, "stat-other");
+
+        // 2 篇已发布（算）+ 1 篇草稿（不算）+ 1 篇已发布但软删（不算）→ articleCount 应为 2
+        insertTestBlog(authorId, "published", false);
+        insertTestBlog(authorId, "published", false);
+        insertTestBlog(authorId, "draft", false);
+        insertTestBlog(authorId, "published", true);
+
+        // otherId 关注 authorId（authorId 的粉丝）；authorId 关注 otherId（authorId 的关注）
+        userFollowMapper.insert(newFollow(otherId, authorId));
+        userFollowMapper.insert(newFollow(authorId, otherId));
+
+        String jwt = jwtHelper.createToken(authorId, 0L);
+        mockMvc.perform(get("/user/getStat").cookie(new Cookie(jwtCookieProperties.getName(), jwt)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(0))
+                .andExpect(jsonPath("$.result.articleCount").value(2))
+                .andExpect(jsonPath("$.result.followerCount").value(1))
+                .andExpect(jsonPath("$.result.followingCount").value(1));
+    }
+
+    private void insertTestUser(long id, String usernamePrefix) {
+        UserInfo user = new UserInfo();
+        user.setId(id);
+        user.setEmail(usernamePrefix + "-" + id + "@example.com");
+        user.setUsername(usernamePrefix + (id % 1_000_000));
+        user.setPassword(passwordEncoder.encode("Test12345"));
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        user.setIsDeleted(false);
+        user.setDeletedToken(0L);
+        user.setTokenVersion(0L);
+        userInfoMapper.insert(user);
+    }
+
+    private void insertTestBlog(long userId, String status, boolean isDeleted) {
+        long textId = snowflakeIdGenerator.nextId();
+        TextBody text = new TextBody();
+        text.setId(textId);
+        text.setBody("body");
+        text.setContentHash("hash-" + textId);
+        text.setCreatedAt(LocalDateTime.now());
+        textBodyMapper.insert(text);
+
+        Blog blog = new Blog();
+        blog.setId(snowflakeIdGenerator.nextId());
+        blog.setUserId(userId);
+        blog.setTitle("t");
+        blog.setAbstractText("a");
+        blog.setIsCustomAbstract(false);
+        blog.setStatus(status);
+        blog.setContentTextId(textId);
+        blog.setCreatedAt(LocalDateTime.now());
+        blog.setUpdatedAt(LocalDateTime.now());
+        blog.setLastActiveAt(LocalDateTime.now());
+        blog.setIsDeleted(isDeleted);
+        blogMapper.insert(blog);
+    }
+
+    private UserFollow newFollow(long followerId, long followingId) {
+        UserFollow follow = new UserFollow();
+        follow.setId(snowflakeIdGenerator.nextId());
+        follow.setFollowerId(followerId);
+        follow.setFollowingId(followingId);
+        follow.setCreatedAt(LocalDateTime.now());
+        follow.setUpdatedAt(LocalDateTime.now());
+        return follow;
     }
 
     /** 登录失败要落一行 audit_log（GlobalExceptionHandler 那批日志兜底和这个是两件事：
