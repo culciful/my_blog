@@ -210,6 +210,36 @@ class ContractSmokeTest {
                 .andExpect(jsonPath("$.result.followingCount").value(1));
     }
 
+    /**
+     * 浏览量防刷：同一 IP 反复打开同一篇文章，去重窗口内只计一次；换一个 IP 就能再计一次。
+     * 之前是每次请求都 +1，刷新页面就能无限堆浏览数。
+     */
+    @Test
+    void articleViewCountDedupedByIp() throws Exception {
+        long authorId = snowflakeIdGenerator.nextId();
+        insertTestUser(authorId, "view-author");
+        long aid = insertTestBlog(authorId, "published", false);
+
+        mockMvc.perform(get("/article/getArticleInfo").param("aid", String.valueOf(aid))
+                        .with(req -> { req.setRemoteAddr("203.0.113.10"); return req; }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.viewCount").value(1));
+
+        // 同一 IP 再打开 3 次，浏览量不应该继续涨
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(get("/article/getArticleInfo").param("aid", String.valueOf(aid))
+                            .with(req -> { req.setRemoteAddr("203.0.113.10"); return req; }))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.result.viewCount").value(1));
+        }
+
+        // 换个 IP，应该能再计一次
+        mockMvc.perform(get("/article/getArticleInfo").param("aid", String.valueOf(aid))
+                        .with(req -> { req.setRemoteAddr("203.0.113.20"); return req; }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.viewCount").value(2));
+    }
+
     private void insertTestUser(long id, String usernamePrefix) {
         UserInfo user = new UserInfo();
         user.setId(id);
@@ -224,7 +254,7 @@ class ContractSmokeTest {
         userInfoMapper.insert(user);
     }
 
-    private void insertTestBlog(long userId, String status, boolean isDeleted) {
+    private long insertTestBlog(long userId, String status, boolean isDeleted) {
         long textId = snowflakeIdGenerator.nextId();
         TextBody text = new TextBody();
         text.setId(textId);
@@ -233,19 +263,22 @@ class ContractSmokeTest {
         text.setCreatedAt(LocalDateTime.now());
         textBodyMapper.insert(text);
 
+        long blogId = snowflakeIdGenerator.nextId();
         Blog blog = new Blog();
-        blog.setId(snowflakeIdGenerator.nextId());
+        blog.setId(blogId);
         blog.setUserId(userId);
         blog.setTitle("t");
         blog.setAbstractText("a");
         blog.setIsCustomAbstract(false);
         blog.setStatus(status);
         blog.setContentTextId(textId);
+        blog.setViewCount(0);
         blog.setCreatedAt(LocalDateTime.now());
         blog.setUpdatedAt(LocalDateTime.now());
         blog.setLastActiveAt(LocalDateTime.now());
         blog.setIsDeleted(isDeleted);
         blogMapper.insert(blog);
+        return blogId;
     }
 
     private UserFollow newFollow(long followerId, long followingId) {

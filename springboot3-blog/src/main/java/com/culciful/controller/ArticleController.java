@@ -22,10 +22,13 @@ import com.culciful.pojo.FileAsset;
 import com.culciful.pojo.TextBody;
 import com.culciful.pojo.UserInfo;
 import com.culciful.pojo.UserPackage;
+import com.culciful.security.ArticleViewDedupeService;
 import com.culciful.service.ImageStorageService;
 import com.culciful.utils.ArticleAbstract;
 import com.culciful.utils.ArticleCover;
+import com.culciful.utils.RequestUtils;
 import com.culciful.utils.SnowflakeIdGenerator;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -64,6 +67,7 @@ public class ArticleController {
     private final FileAssetMapper fileAssetMapper;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
     private final ImageStorageService imageStorageService;
+    private final ArticleViewDedupeService articleViewDedupeService;
 
     private static final String STATUS_DRAFT = "draft";
     private static final String STATUS_PUBLISHED = "published";
@@ -114,18 +118,23 @@ public class ArticleController {
     }
 
     @GetMapping("/getArticleInfo")
-    public R<Map<String, Object>> getArticleInfo(@RequestParam("aid") String aidParam) {
+    public R<Map<String, Object>> getArticleInfo(@RequestParam("aid") String aidParam, HttpServletRequest httpRequest) {
         Long aid = asLong(aidParam);
         Blog blog = aid == null ? null : blogMapper.selectById(aid);
         if (blog == null || Boolean.TRUE.equals(blog.getIsDeleted()) || !STATUS_PUBLISHED.equals(blog.getStatus())) {
             // 草稿对所有人（含作者）走 getArticleInfo 都是 404；作者编辑草稿走 getDraft
             return R.fail(ResultCodeEnum.NOT_FOUND);
         }
-        // 显式保留 updated_at，避免浏览量自增触发 ON UPDATE CURRENT_TIMESTAMP，
-        // 让 updated_at 只反映真正的内容编辑
-        blogMapper.update(null, new LambdaUpdateWrapper<Blog>()
-                .setSql("view_count = view_count + 1, updated_at = updated_at")
-                .eq(Blog::getId, aid));
+        // 防刷：同一 IP 对同一篇文章，去重窗口（默认 10 分钟）内只计一次浏览量——
+        // 之前是每次请求都 +1，刷新页面/被爬虫反复打就能无限堆浏览数
+        if (articleViewDedupeService.shouldCount(aid, RequestUtils.clientIp(httpRequest))) {
+            // 显式保留 updated_at，避免浏览量自增触发 ON UPDATE CURRENT_TIMESTAMP，
+            // 让 updated_at 只反映真正的内容编辑
+            blogMapper.update(null, new LambdaUpdateWrapper<Blog>()
+                    .setSql("view_count = view_count + 1, updated_at = updated_at")
+                    .eq(Blog::getId, aid));
+            blog.setViewCount(blog.getViewCount() == null ? 1 : blog.getViewCount() + 1);
+        }
         return R.ok(articleDetail(blog));
     }
 
