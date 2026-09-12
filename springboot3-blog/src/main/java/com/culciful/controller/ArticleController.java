@@ -200,6 +200,7 @@ public class ArticleController {
             blog.setCreatedAt(LocalDateTime.now());
         }
         blogMapper.updateById(blog);
+        forceCoverUrl(blog);
         replaceTags(aid, request.tags());
         if (promotingDraft) {
             userInfoMapper.update(null, new LambdaUpdateWrapper<UserInfo>()
@@ -249,6 +250,7 @@ public class ArticleController {
             draft.setPackageId(pkg);
             draft.setUpdatedAt(LocalDateTime.now());
             blogMapper.updateById(draft);
+            forceCoverUrl(draft);
             replaceTags(draft.getId(), request.tags());
             return R.ok(Map.of("id", draft.getId()));
         }
@@ -416,6 +418,22 @@ public class ArticleController {
         m.put("avatarUrl", avatarUrl(user.getAvatarAssetId()));
         m.put("isDeleted", Boolean.TRUE.equals(user.getIsDeleted()));
         return m;
+    }
+
+    /**
+     * cover_url 的更新必须无条件带上，哪怕新值是 null（正文里的图被删光了）——但 MP 默认的
+     * NOT_NULL 更新策略会跳过 null 字段，updateById(blog) 那一发 SQL 顺带不到它。
+     * 本来是给 Blog.coverUrl 字段加 @TableField(updateStrategy = FieldStrategy.IGNORED) 解决的，
+     * 但那个注解形式在当前 JDK17.0.12 + Lombok 1.18.46 + maven-compiler-plugin 3.14.1 组合下会
+     * 产出损坏的 class 文件（运行时 AnnotationFormatError: Unexpected end of annotations，
+     * mvn clean 重编也复现），复现步骤：起个探针反射读 Blog 每个字段的 getDeclaredAnnotations()，
+     * 只有带 updateStrategy= 的这个字段炸；去掉 updateStrategy 立刻正常——改走这个显式二次
+     * update，绕开那个注解形式，行为等价（单独一条 SQL 强制写 cover_url，不管新值是不是 null）。
+     */
+    private void forceCoverUrl(Blog blog) {
+        blogMapper.update(null, new LambdaUpdateWrapper<Blog>()
+                .eq(Blog::getId, blog.getId())
+                .set(Blog::getCoverUrl, blog.getCoverUrl()));
     }
 
     private void replaceTags(Long blogId, List<String> tags) {

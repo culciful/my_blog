@@ -1,7 +1,7 @@
 package com.culciful.service;
 
 import com.culciful.pojo.TextBody;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
 * @author culciful_zy

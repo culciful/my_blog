@@ -1,6 +1,5 @@
 package com.culciful.pojo;
 
-import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -56,10 +55,13 @@ public class Blog {
     /**
      * 正文第一张图片 URL（{@link com.culciful.utils.ArticleCover}），列表缩略图用；没图为 null。
      * 每次发布/编辑正文都会重算，作者不能自定义。
-     * updateStrategy=IGNORED：编辑时可能把图删没了（值变回 null），MP 默认 NOT_NULL 策略会跳过
-     * null 字段、导致旧封面残留 —— 这个字段的 update 必须无条件带上，哪怕是 null。
+     * 编辑时可能把图删没了（值变回 null），MP 默认 NOT_NULL 更新策略会跳过 null 字段、导致旧封
+     * 面残留——这个字段的 update 必须无条件带上，哪怕是 null。本来用
+     * {@code @TableField(updateStrategy = FieldStrategy.IGNORED)} 解决，但这个注解形式在当前
+     * 工具链组合下会产出损坏的 class 文件（见 {@link com.culciful.controller.ArticleController
+     * #forceCoverUrl}），改成在 controller 里显式二次 update 绕开。
      */
-    @TableField(value = "cover_url", updateStrategy = FieldStrategy.IGNORED)
+    @TableField(value = "cover_url")
     private String coverUrl;
 
     /**

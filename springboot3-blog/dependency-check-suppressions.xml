@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!--
+    误报 / 已评估接受的漏洞放这里，每条都要写清楚为什么。格式示例：
+
+    <suppress>
+        <notes><![CDATA[
+        说明为什么这条是误报或可接受：影响面不涉及本项目的实际用法 / 已升级到不受影响的版本 / 等等
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/some\.group/some-artifact@.*$</packageUrl>
+        <cve>CVE-XXXX-XXXXX</cve>
+    </suppress>
+    -->
+</suppressions>

@@ -1,6 +1,6 @@
 package com.culciful.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.culciful.pojo.BlogComment;
 import com.culciful.service.BlogCommentService;
 import com.culciful.mapper.BlogCommentMapper;
