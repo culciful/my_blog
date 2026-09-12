@@ -1,5 +1,9 @@
 package com.culciful;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.culciful.common.enums.AuditAction;
 import com.culciful.config.JwtCookieProperties;
@@ -193,6 +197,36 @@ class ContractSmokeTest {
                 .andExpect(jsonPath("$.errorCode").value(-10012));
     }
 
+    /**
+     * 回归测试：MethodArgumentNotValidException 默认的 toString()/getMessage() 会把校验失败的
+     * 原始字段值原样带出来（"rejected value [xxx]"）——之前 GlobalExceptionHandler.handleBadRequest
+     * 直接打了 e.toString()，DEBUG 级别一开就会把这里提交的明文密码写进日志。改成只打异常类名后
+     * 这条测试才通过；如果以后有人手滑改回 e.toString()/e.getMessage()，这条测试会炸。
+     */
+    @Test
+    void badRequestLogNeverContainsSubmittedPassword() throws Exception {
+        Logger logger = (Logger) org.slf4j.LoggerFactory.getLogger(
+                "com.culciful.common.exception.GlobalExceptionHandler");
+        Level original = logger.getLevel();
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        logger.setLevel(Level.DEBUG);
+        try {
+            mockMvc.perform(post("/user/resetPassword")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"x@example.com\",\"newPassword\":\"lEak1x\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.errorCode").value(-10012));
+        } finally {
+            logger.detachAppender(appender);
+            logger.setLevel(original);
+        }
+        boolean leaked = appender.list.stream()
+                .anyMatch(event -> event.getFormattedMessage().contains("lEak1x"));
+        Assertions.assertFalse(leaked, "GlobalExceptionHandler 的 DEBUG 日志把提交的密码明文打出来了");
+    }
+
     @Test
     void imageUploadRequiresAuthentication() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -266,5 +300,22 @@ class ContractSmokeTest {
                         .content("{\"email\":\"not-an-email\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorCode").value(-10012));
+    }
+
+    @Test
+    void securityHeadersPresent() throws Exception {
+        mockMvc.perform(get("/article/getTags"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                // HTTP（非 HTTPS）请求不应该带 HSTS：明文响应里发这个头没意义，还可能被剥离
+                .andExpect(header().doesNotExist("Strict-Transport-Security"));
+    }
+
+    @Test
+    void hstsOnlySentOverHttps() throws Exception {
+        mockMvc.perform(get("/article/getTags").secure(true))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Strict-Transport-Security", "max-age=31536000 ; includeSubDomains"));
     }
 }
