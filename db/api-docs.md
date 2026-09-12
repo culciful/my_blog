@@ -118,11 +118,11 @@
 | `/article/getArticleList` | POST | 分页检索文章（仅 `status=published`） | `article/components/list.vue` |
 | `/article/getArticleInfo` | GET `?aid=` | 单篇详情（并浏览量 +1）；草稿一律 404 | `article/index.vue`、`addArticle.vue` |
 | `/article/addArticle` | POST | 新建文章（直接发布）→ `{ id }` | `addArticle.vue` |
-| `/article/editArticle` | POST | 编辑文章，body 含 `aid` → `{ id }`。目标是草稿行时＝发布该草稿（`status→published`、发布时间取现在、`article_count+1`） | `addArticle.vue` |
-| `/article/saveDraft` | POST | 保存草稿：无 `aid` 新建、有 `aid` 更新自己的草稿 → `{ id }`。需登录。只校验标题非空（≤64），正文/分组/标签/摘要都可空。不计入 `article_count` | `addArticle.vue` |
+| `/article/editArticle` | POST | 编辑文章，body 含 `aid` → `{ id }`。目标是草稿行时＝发布该草稿（`status→published`、发布时间取现在） | `addArticle.vue` |
+| `/article/saveDraft` | POST | 保存草稿：无 `aid` 新建、有 `aid` 更新自己的草稿 → `{ id }`。需登录。只校验标题非空（≤64），正文/分组/标签/摘要都可空。草稿不计入文章数统计 | `addArticle.vue` |
 | `/article/getDraftList` | POST | 当前用户的草稿列表（按 `updated_at` 倒序），body `{ pageSize, currentPage, filter:{ keyword? } }`（keyword 匹配 title/abstract）→ 与 `getArticleList` 同形（`{ list:[{aid,id,member,title,createTime,viewCount:0,commentCount:0,abstract}], total }`），复用同一个 `articleList.vue` 组件渲染。需登录 | `article/components/articleList.vue`（`packageId==='draft'`） |
 | `/article/getDraft` | GET `?aid=` | 取自己某篇草稿供编辑回填 → `{ aid, title, content, abstract, isCustomAbstract, pid, package:{pid,pname}, tags, updateTime }`。非本人 / 非草稿 → 404/403。不自增浏览量 | `addArticle.vue` |
-| `/article/deleteArticle` | POST | 删除文章 / 草稿，body `{ aid }`（软删）。已发布行才 `article_count-1`，草稿不动计数 | `article/components/articleList.vue` |
+| `/article/deleteArticle` | POST | 删除文章 / 草稿，body `{ aid }`（软删）。文章数是实时 COUNT，软删后自然不再计入 | `article/components/articleList.vue` |
 | `/article/uploadImage` | POST（form-data） | 上传正文图片 → `{ url, imgUrl }`，需登录 | `addArticle.vue` |
 | `/comment/uploadImage` | POST（form-data） | 上传评论插图 → `{ url, imgUrl }`，需登录（`asset_type=comment_image`） | `addComment.vue` |
 | `/article/getTags` | GET | 标签列表 → `{ list: string[] }` | `addArticle.vue` |
@@ -139,7 +139,7 @@
 
 `addArticle` / `editArticle` / `saveDraft` body：`{ id（作者，忽略）, aid（edit / 更新草稿时）, title, abstract?, content, pid, tags: string[] }`（`createTime` 后端忽略，发布时间由后端取 `now`）
 
-**草稿（`status`）**：`blog.status` = `draft` / `published`（默认 `published`，老数据即已发布）。草稿仅作者可见（不进公开列表 / 详情、不计入 `article_count`）。前端路由 `/write` 新建、`/draft/:aid` 编辑草稿、`/edit/:aid` 编辑已发布文章；`addArticle.vue` 底部「保存」→ `saveDraft`，「发布」→ `addArticle`（新建）或 `editArticle`（草稿提升 / 文章改动）。内容管理页「草稿箱」是左栏 / 移动端下拉框里单独渲染的一条（哨兵 `pid='draft'`，排「全部」前、仅非访客，不进 `packageList` 数组），选中时 `articleList.vue` 改打 `getDraftList` 并把行内链接指向 `/draft/:aid`。
+**草稿（`status`）**：`blog.status` = `draft` / `published`（默认 `published`，老数据即已发布）。草稿仅作者可见（不进公开列表 / 详情、不计入文章数统计）。前端路由 `/write` 新建、`/draft/:aid` 编辑草稿、`/edit/:aid` 编辑已发布文章；`addArticle.vue` 底部「保存」→ `saveDraft`，「发布」→ `addArticle`（新建）或 `editArticle`（草稿提升 / 文章改动）。内容管理页「草稿箱」是左栏 / 移动端下拉框里单独渲染的一条（哨兵 `pid='draft'`，排「全部」前、仅非访客，不进 `packageList` 数组），选中时 `articleList.vue` 改打 `getDraftList` 并把行内链接指向 `/draft/:aid`。
 
 **摘要 `abstract` 生成规则**（`ArticleAbstract`，只有一个概念、一个字段名 `abstract`）：
 > 1. 请求带 `abstract`（非空，≤200）→ 存作者原文（剥 markdown，`is_custom_abstract=1`），**不加省略号**
