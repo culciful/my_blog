@@ -262,12 +262,20 @@ public class UserController {
         if (selfId == null) {
             return R.fail(ResultCodeEnum.NOT_LOGIN);
         }
+        // 换头像前先记下旧的 avatarAssetId：新头像落库成功、user_info 指向新头像之后，
+        // 旧的 file_asset 行（DB + 磁盘文件）就是孤儿了，清掉，避免每换一次头像就永久
+        // 多积一份没人再引用的图片
+        UserInfo before = userInfoMapper.selectById(selfId);
+        Long oldAvatarAssetId = before == null ? null : before.getAvatarAssetId();
         FileAsset asset = resolveAvatarAsset(file, image, selfId);
         UserInfo user = new UserInfo();
         user.setId(selfId);
         user.setAvatarAssetId(asset.getId());
         user.setUpdatedAt(LocalDateTime.now());
         userInfoMapper.updateById(user);
+        if (oldAvatarAssetId != null && !oldAvatarAssetId.equals(asset.getId())) {
+            imageStorageService.delete(fileAssetMapper.selectById(oldAvatarAssetId));
+        }
         return R.ok(null);
     }
 

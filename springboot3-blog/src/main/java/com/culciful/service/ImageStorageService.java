@@ -5,6 +5,7 @@ import com.culciful.mapper.FileAssetMapper;
 import com.culciful.pojo.FileAsset;
 import com.culciful.utils.SnowflakeIdGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -44,6 +45,7 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ImageStorageService {
 
     public enum Kind {
@@ -93,6 +95,24 @@ public class ImageStorageService {
             throw new IllegalArgumentException("invalid base64 image", e);
         }
         return persist(bytes, ownerId, kind);
+    }
+
+    /**
+     * 删掉一份已落库的图（DB 行 + 磁盘文件）。目前唯一的用途是换头像时清理旧头像
+     * （FileAsset 没有 is_deleted 概念，不受 MP 全局逻辑删除影响，{@code deleteById} 是真删）。
+     * 磁盘删除失败只记日志不抛异常——DB 行已经删了，重要的一致性状态已经达到，孤儿文件
+     * 最多是浪费点磁盘空间，不该让调用方因为这个失败（换头像这个操作本身应该已经成功了）。
+     */
+    public void delete(FileAsset asset) {
+        if (asset == null) {
+            return;
+        }
+        fileAssetMapper.deleteById(asset.getId());
+        try {
+            Files.deleteIfExists(Path.of(asset.getStorageKey()));
+        } catch (IOException e) {
+            log.warn("failed to delete upload file on disk: {}", asset.getStorageKey(), e);
+        }
     }
 
     private FileAsset persist(byte[] bytes, Long ownerId, Kind kind) {

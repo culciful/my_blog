@@ -9,11 +9,13 @@ import com.culciful.common.enums.AuditAction;
 import com.culciful.config.JwtCookieProperties;
 import com.culciful.mapper.AuditLogMapper;
 import com.culciful.mapper.BlogMapper;
+import com.culciful.mapper.FileAssetMapper;
 import com.culciful.mapper.TextBodyMapper;
 import com.culciful.mapper.UserFollowMapper;
 import com.culciful.mapper.UserInfoMapper;
 import com.culciful.pojo.AuditLog;
 import com.culciful.pojo.Blog;
+import com.culciful.pojo.FileAsset;
 import com.culciful.pojo.TextBody;
 import com.culciful.pojo.UserFollow;
 import com.culciful.pojo.UserInfo;
@@ -26,12 +28,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -62,6 +69,8 @@ class ContractSmokeTest {
     private TextBodyMapper textBodyMapper;
     @Autowired
     private UserFollowMapper userFollowMapper;
+    @Autowired
+    private FileAssetMapper fileAssetMapper;
 
     @Test
     void articleWriteRequiresAuthentication() throws Exception {
@@ -238,6 +247,45 @@ class ContractSmokeTest {
                         .with(req -> { req.setRemoteAddr("203.0.113.20"); return req; }))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.viewCount").value(2));
+    }
+
+    /**
+     * 换头像应该清掉旧的 file_asset 行，不是每换一次就永久多攒一份没人再引用的图。
+     */
+    @Test
+    void uploadAvatarDeletesOldFileAsset() throws Exception {
+        long userId = snowflakeIdGenerator.nextId();
+        insertTestUser(userId, "avatar-user");
+        String jwt = jwtHelper.createToken(userId, 0L);
+
+        mockMvc.perform(multipart("/user/uploadAvatar")
+                        .file(testPng("avatar1.png"))
+                        .cookie(new Cookie(jwtCookieProperties.getName(), jwt)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(0));
+        Long firstAssetId = userInfoMapper.selectById(userId).getAvatarAssetId();
+        Assertions.assertNotNull(firstAssetId);
+        Assertions.assertNotNull(fileAssetMapper.selectById(firstAssetId));
+
+        mockMvc.perform(multipart("/user/uploadAvatar")
+                        .file(testPng("avatar2.png"))
+                        .cookie(new Cookie(jwtCookieProperties.getName(), jwt)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value(0));
+        Long secondAssetId = userInfoMapper.selectById(userId).getAvatarAssetId();
+        Assertions.assertNotNull(secondAssetId);
+        Assertions.assertNotEquals(firstAssetId, secondAssetId);
+
+        Assertions.assertNull(fileAssetMapper.selectById(firstAssetId), "旧头像的 file_asset 行应该被删掉");
+        Assertions.assertNotNull(fileAssetMapper.selectById(secondAssetId));
+    }
+
+    /** 造一张最小的合法 PNG（ImageStorageService 会真的用 ImageIO 解码校验，随便几个字节过不了） */
+    private MockMultipartFile testPng(String filename) throws Exception {
+        BufferedImage image = new BufferedImage(4, 4, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", out);
+        return new MockMultipartFile("file", filename, "image/png", out.toByteArray());
     }
 
     private void insertTestUser(long id, String usernamePrefix) {
