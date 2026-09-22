@@ -193,10 +193,20 @@ const deletePackage = (item) => {
 };
 
 const isFollowing = ref(false);
+// 也用来罩住"初始关注状态还没查回来"这段时间：checkFollow 是 onMounted 里 fire-and-forget
+// 发出去的（不 await，不挡 getPackages），按钮渲染出来早于这个请求落地。真实点了一下确实
+// 复现过：这段时间内点关注，isFollowing 还是默认值 false，switchFollow 拿着这个旧值算
+// shouldFollow；如果 checkFollow 的响应比 switchFollow 晚回来，还会把刚切换好的状态覆盖回去
+// ——是真会发生的竞态，不是测试假象（真实用户手速慢，窗口期很窄不容易踩到；但自动化测试
+// 网络几乎零延迟，两个请求前后脚发出，稳定复现）。loading 状态把按钮罩住，状态没落地之前
+// 不能点。
 const isQuerying = ref(false);
 const checkFollow = () => {
+    isQuerying.value = true;
     proxy.$request.get(Constant.url.checkHasFollow, { [Constant.userId]: userInfo[Constant.userId] }).then(res => {
         isFollowing.value = res.result.isFollowing;
+    }).finally(() => {
+        isQuerying.value = false;
     });
 };
 const switchFollow = () => {
@@ -229,6 +239,14 @@ onMounted(() => {
 
         if (isVisitMode.value) {
             userInfo[Constant.userId] = queriedId;
+            // 同步地、在任何 await 之前就把关注按钮罩住：checkFollow() 本身在下面 await
+            // getUserInfo() 之后才会被调用，光靠 checkFollow 内部设 isQuerying=true 关不住
+            // "组件刚挂载、getUserInfo 还没返回"这段窗口期——这段时间按钮已经渲染成可点的
+            // 默认态（isFollowing 的初始值 false），手速快或者自动化测试点这个窗口就会拿着
+            // 过期的 isFollowing 值算 shouldFollow，off-by-one 拍不准。
+            if (localStorage.getItem(LOGIN_STATE)) {
+                isQuerying.value = true;
+            }
             try {
                 // 已注销的用户 getUserInfo 也查得到（isDeleted:true），只有 id 压根不存在才会 404 到 catch；
                 // 历史文章/合集仍然可以浏览，所以这里不能把「已注销」和「真不存在」当同一种情况处理
@@ -241,7 +259,9 @@ onMounted(() => {
                 userInfo[Constant.avatarUrl] = r[Constant.avatarUrl] as string;
                 isTargetDeleted.value = !!r[Constant.isDeleted];
             } catch {
-                // id 真的查不到人：整页换成提示，不再往下拉 package/article/关注状态
+                // id 真的查不到人：整页换成提示，不再往下拉 package/article/关注状态。
+                // 走不到 checkFollow 了，上面提前设的 isQuerying 也要解开，不然永远卡 loading
+                isQuerying.value = false;
                 userNotFound.value = true;
                 return;
             }

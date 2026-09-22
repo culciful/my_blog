@@ -50,7 +50,6 @@ const constant = {
     package: 'package',
     tags: 'tags',
     tag: 'tag',
-    commentList: 'comments',
     commentId: 'cid',
     author: 'member',
     member: 'member',
