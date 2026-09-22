@@ -205,7 +205,7 @@ public class CommentController {
                 .set(BlogComment::getUpdatedAt, LocalDateTime.now())
                 .eq(BlogComment::getId, cid));
         blogMapper.update(null, new LambdaUpdateWrapper<Blog>()
-                .setSql("comment_count = greatest(comment_count - 1, 0)")
+                .setSql("comment_count = greatest(cast(comment_count as signed) - 1, 0)")
                 .eq(Blog::getId, aid));
         return R.ok(null);
     }

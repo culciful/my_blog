@@ -386,7 +386,6 @@ public class ArticleController {
         m.put("pid", blog.getPackageId());
         m.put("package", articlePackage(blog.getPackageId()));
         m.put("tags", tagsByBlog(blog.getId()));
-        m.put("comments", Map.of("list", List.of(), "total", blog.getCommentCount() == null ? 0 : blog.getCommentCount()));
         return m;
     }
 
