@@ -288,7 +288,7 @@ main {
             height: 100%;
         }
         :deep(.el-scrollbar__view) {
-            padding-right: 8px;
+            padding-right: 24px;
             padding-bottom: 96px;
         }
         // v-md-editor 预览态内部还套了一层自己的 scrollbar 组件。某些情况下它自己会拿到

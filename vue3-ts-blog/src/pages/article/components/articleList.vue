@@ -57,7 +57,7 @@
 import {transferTimestamp} from '@/utils/utils';
 import {computed, getCurrentInstance, onMounted, ref, watch} from 'vue';
 import ArticleConstant, {DRAFT_PID} from '@/model/article/constant';
-import {useRouter} from 'vue-router';
+import {useRoute, useRouter} from 'vue-router';
 import {ElMessage, ElMessageBox} from 'element-plus';
 import i18n from '@/language/i18n';
 import UserConstant, {viewUser} from '@/model/user/constant';
@@ -68,16 +68,44 @@ const props = defineProps<{
     userId?: number|string,
     packageId?: number|string
     enableOperate?: boolean
+    // 页码 / 每页条数同步到 URL（?page=12&size=20）：点进文章再返回时组件会重建，
+    // 只放在组件内存里页码就回到 1。用 replace 写，不给历史栈添一堆分页条目
+    isPageInQuery?: boolean
 }>();
 
 const { proxy }: any = getCurrentInstance();
 const router = useRouter();
+const route = useRoute();
 const { t } = i18n.global as any;
 
-const pageSize = ref(10);
+const DEFAULT_PAGE_SIZE = 10;
+// 跟 el-pagination 默认的 page-sizes 一致，URL 里带个别的数（手改）就退回默认
+const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50, 100];
+const queryInt = (val: unknown): number => {
+    const n = Number(Array.isArray(val) ? val[0] : val);
+    return Number.isInteger(n) && n > 0 ? n : 0;
+};
+const sizeFromQuery = () => {
+    const size = queryInt(route.query.size);
+    return PAGE_SIZE_OPTIONS.includes(size) ? size : DEFAULT_PAGE_SIZE;
+};
+
+const pageSize = ref(props.isPageInQuery ? sizeFromQuery() : DEFAULT_PAGE_SIZE);
 const totalCount = ref(0);
-const currentPage = ref(1);
+const currentPage = ref(props.isPageInQuery ? queryInt(route.query.page) || 1 : 1);
 let articleList = ref([]);
+
+// 默认值（第 1 页 / 每页 10 条）不写，URL 保持干净
+const writePageToQuery = () => {
+    if (!props.isPageInQuery) return;
+    router.replace({
+        query: {
+            ...route.query,
+            page: currentPage.value > 1 ? String(currentPage.value) : undefined,
+            size: pageSize.value !== DEFAULT_PAGE_SIZE ? String(pageSize.value) : undefined
+        }
+    });
+};
 
 // 选中「草稿箱」时整个列表切成草稿：换接口 + 链接指向 /draft/:id
 const isDraft = computed(() => props.packageId === DRAFT_PID);
@@ -94,10 +122,12 @@ const authorName = (item) => {
 const handleSizeChange = (val: number) => {
     pageSize.value = val;
     getArticleList();
+    writePageToQuery();
 };
 const handleCurrentChange = (val: number) => {
     currentPage.value = val;
     getArticleList();
+    writePageToQuery();
 };
 const viewArticle = (articleId) => {
     router.push(`${isDraft.value ? '/draft/' : '/article/'}${articleId}`);
@@ -127,6 +157,15 @@ const getArticleList = () => {
         currentPage: currentPage.value,
         filter
     }).then( ({result}) => {
+        // 页码超出总页数（URL 手改 / 那页的文章后来被删光）：翻页控件在总数 <= 每页条数时
+        // 不渲染，不夹回去就是一个空列表 + 没有任何翻页入口
+        const lastPage = Math.max(1, Math.ceil(result.total / pageSize.value));
+        if (currentPage.value > lastPage) {
+            currentPage.value = lastPage;
+            getArticleList();
+            writePageToQuery();
+            return;
+        }
         articleList.value = result.list;
         totalCount.value = result.total;
     });

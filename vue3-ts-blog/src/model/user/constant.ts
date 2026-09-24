@@ -1,4 +1,5 @@
 import i18n from '@/language/i18n';
+import defaultAvatar from '@/assets/img/icons/user-filling.svg';
 
 const { t } = i18n.global as any;
 const moduleName = 'user';
@@ -102,7 +103,7 @@ export const viewUser = (router: any, userinfo: Record<string, any>) => {
 };
 
 export const handleAvatar = (avatarUrl?: string): string => {
-    if (!avatarUrl) return '/static/img/user-filling.svg';
+    if (!avatarUrl) return defaultAvatar;
     return avatarUrl;
 };
 

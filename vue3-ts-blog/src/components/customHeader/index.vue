@@ -66,7 +66,8 @@
                 </svg-icon>
 
                 <el-dropdown v-else placement="bottom-end">
-                    <img class="a-m-h-xs user-icon" :src="handleAvatar(userStore.avatarUrl)" />
+                    <img v-if="userStore.avatarUrl" class="a-m-h-xs user-icon" :src="userStore.avatarUrl" />
+                    <svg-icon v-else class="a-m-h-xs" :size="24" name="user-filling"></svg-icon>
                     <template #dropdown>
                         <el-dropdown-menu >
                             <el-dropdown-item 
@@ -94,7 +95,6 @@ import {storeToRefs} from 'pinia';
 import {useRoute} from 'vue-router';
 import {needLoginPathReg} from '@/router/index.ts';
 import {getCurrentInstance} from 'vue';
-import {handleAvatar} from '@/model/user/constant';
 import ApiConstant from '@/model/api/constant';
 import {LOGIN_STATE} from '@/utils/localStoreItem';
 
