@@ -1,0 +1,44 @@
+name: frontend
+
+# 前端：类型检查 + 生产构建。只在动了前端（或本文件）时触发。
+# npm run build = vue-tsc 类型检查 与 vite build 并行，任何一个失败都会让这个任务失败，
+# 能提前发现"只在生产构建才炸"的问题（比如 vue-i18n 文案里的特殊字符）。
+on:
+  push:
+    branches: [master]
+    paths:
+      - "vue3-ts-blog/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    paths:
+      - "vue3-ts-blog/**"
+      - ".github/workflows/frontend.yml"
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: vue3-ts-blog
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: vue3-ts-blog/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check and build
+        run: npm run build

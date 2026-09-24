@@ -1,0 +1,78 @@
+name: backend
+
+# 后端：mvn test。
+# ContractSmokeTest / IntegrationSmokeTest 是真连 MySQL 的集成测试（@SpringBootTest + MockMvc），
+# 所以这里起一个一次性的 MySQL 服务容器，导入 db/blog.sql 建库，测试自己造数据，不依赖已有数据。
+# 提交进仓库的 application*.yaml 是不带真实密码的版本：DB 连接和 JWT 密钥全走环境变量，
+# 没配 spring.mail.host 时验证码只打日志，不需要 Mailhog。
+on:
+  push:
+    branches: [master]
+    paths:
+      - "springboot3-blog/**"
+      - "db/blog.sql"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "springboot3-blog/**"
+      - "db/blog.sql"
+      - ".github/workflows/backend.yml"
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-pw"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DB_URL: jdbc:mysql://127.0.0.1:3306/culciful_blog
+      DB_USERNAME: root
+      DB_PASSWORD: ci-root-pw
+      # 只在 CI 里用的测试密钥（>= 64 字符，JwtHelper 启动时会校验长度），不是真实密钥
+      JWT_TOKEN_SIGN_KEY: ci-only-jwt-signing-key-not-a-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load schema (db/blog.sql)
+        env:
+          MYSQL_PWD: ci-root-pw
+        run: mysql -h 127.0.0.1 -uroot < db/blog.sql
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: springboot3-blog/pom.xml
+
+      - name: Run tests
+        working-directory: springboot3-blog
+        run: mvn -B test
+
+      - name: Upload surefire reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: springboot3-blog/target/surefire-reports
+          if-no-files-found: ignore

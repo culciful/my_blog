@@ -1,0 +1,106 @@
+name: docker
+
+# 整套容器化冒烟：docker compose 构建 4 个服务，起起来后通过 nginx（唯一对外入口）验证几个
+# "只有真跑整套才会暴露"的问题。这些都是 2026-09-24 浏览器联调里真踩过的坑，固化成回归检查：
+#   1. 浏览器带 Origin 的 POST 不能被判成跨域（nginx 的 Host 必须带端口）
+#   2. 直接打开/刷新 /article/123、/user/userCenter 必须返回前端 index.html，不能被转给后端
+#   3. 接口请求（Accept 不含 text/html）仍然转发给后端
+#   4. index.html 里引用的 katex / mermaid 脚本必须真的存在
+on:
+  push:
+    branches: [master]
+    paths:
+      - "vue3-ts-blog/**"
+      - "springboot3-blog/**"
+      - "db/**"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    paths:
+      - "vue3-ts-blog/**"
+      - "springboot3-blog/**"
+      - "db/**"
+      - ".github/workflows/docker.yml"
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: db
+    env:
+      # docker-compose.yml 里这两个是必填变量（缺了直接报错），CI 里给一次性的值
+      MYSQL_ROOT_PASSWORD: ci-compose-pw
+      JWT_TOKEN_SIGN_KEY: ci-only-jwt-signing-key-not-a-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for the API (through nginx)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS -X POST http://localhost:8880/article/getArticleList \
+                 -H 'Content-Type: application/json' \
+                 -d '{"pageSize":1,"currentPage":1,"filter":{}}' 2>/dev/null | grep -q '"errorCode":0'; then
+              echo "API is up after $((i * 3))s"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "API did not come up within 180s"
+          exit 1
+
+      - name: Smoke checks through nginx
+        run: |
+          set -euo pipefail
+          BASE=http://localhost:8880
+          HTML='text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+
+          echo "1) POST with a browser Origin must not be rejected as cross-origin"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/article/getArticleList" \
+            -H 'Content-Type: application/json' -H "Origin: $BASE" -d '{"pageSize":1,"currentPage":1,"filter":{}}')
+          [ "$code" = 200 ] || { echo "expected 200, got $code"; exit 1; }
+
+          echo "2) page loads under API path prefixes must serve the SPA index.html"
+          for path in /article/123 /user/userCenter /user/manageContent /write; do
+            curl -fsS -H "Accept: $HTML" "$BASE$path" | grep -q '<div id="app">' \
+              || { echo "$path did not return index.html"; exit 1; }
+          done
+
+          echo "3) XHR-style requests under the same prefixes must still reach the backend"
+          curl -fsS -H 'Accept: application/json, text/plain, */*' "$BASE/article/getTags" | grep -q '"errorCode":0' \
+            || { echo "/article/getTags did not reach the backend"; exit 1; }
+
+          echo "4) scripts referenced by index.html must exist"
+          for path in /node_modules/katex/dist/katex.min.js /node_modules/mermaid/dist/mermaid.min.js; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE$path")
+            [ "$code" = 200 ] || { echo "$path returned $code"; exit 1; }
+          done
+
+          echo "5) /uploads/ must be proxied to the backend, never the SPA fallback"
+          if curl -s -H "Accept: $HTML" "$BASE/uploads/avatar/does-not-exist.png" | grep -q '<div id="app">'; then
+            echo "/uploads/ returned the SPA index.html"; exit 1
+          fi
+
+          echo "all smoke checks passed"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,126 @@
+name: dependency-scan
+
+# 依赖漏洞扫描：前端 npm audit + 后端 OWASP dependency-check。
+# 每周一跑一次，依赖文件变了也跑，也可以在 Actions 页面手动触发。
+#
+# ⚠️ 目前只"报告"，不会让任务变红：
+#   前端 npm audit（仅生产依赖）有 40 多个问题，多数来自 v-md-editor / mermaid 的间接依赖；
+#   后端升到 Spring Boot 3.5.16 之后仍剩 48 个 CVE，新版本本身也会持续冒新 CVE，不可能清零。
+#   一开始就设成失败，这个工作流会永远是红的，反而没人看。
+# 处理过一批（升级依赖 / 把已评估的误报记进 springboot3-blog/dependency-check-suppressions.xml）后，
+# 再把下面两个阈值收紧：
+#   FAIL_ON_CVSS         11 = 永不失败；9 = 有严重(Critical)漏洞就失败；7 = 高危及以上就失败
+#   NPM_AUDIT_FAIL_LEVEL none / moderate / high / critical
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "springboot3-blog/pom.xml"
+      - "vue3-ts-blog/package-lock.json"
+      - ".github/workflows/security.yml"
+
+concurrency:
+  group: dependency-scan
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FAIL_ON_CVSS: "11"
+  NPM_AUDIT_FAIL_LEVEL: none
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: vue3-ts-blog
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: npm audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=${{ env.NPM_AUDIT_FAIL_LEVEL }}
+
+      - name: Summary
+        if: always()
+        run: |
+          npm audit --omit=dev --json > audit.json || true
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          m = json.load(open("audit.json")).get("metadata", {}).get("vulnerabilities", {})
+          print("### npm audit (production dependencies)")
+          print(", ".join(f"{k}: {m.get(k, 0)}" for k in ("critical", "high", "moderate", "low")))
+          EOF
+
+  maven-dependency-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # 在仓库 Settings -> Secrets and variables -> Actions 里新建 NVD_API_KEY。
+      # 免费申请：https://nvd.nist.gov/developers/request-an-api-key
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+    steps:
+      - name: Skip when NVD_API_KEY is not configured
+        if: ${{ env.NVD_API_KEY == '' }}
+        run: echo "::warning::NVD_API_KEY secret is not set, skipping the OWASP dependency-check job"
+
+      - uses: actions/checkout@v4
+        if: ${{ env.NVD_API_KEY != '' }}
+
+      - uses: actions/setup-java@v4
+        if: ${{ env.NVD_API_KEY != '' }}
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: springboot3-blog/pom.xml
+
+      # 首次要同步完整 NVD 数据（几分钟到十几分钟），缓存起来之后每次只拉增量
+      - uses: actions/cache@v4
+        if: ${{ env.NVD_API_KEY != '' }}
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: dependency-check-data-
+
+      - name: Run OWASP dependency-check
+        if: ${{ env.NVD_API_KEY != '' }}
+        working-directory: springboot3-blog
+        run: >-
+          mvn -B org.owasp:dependency-check-maven:13.0.0:check
+          -DnvdApiKey="$NVD_API_KEY"
+          -DfailBuildOnCVSS=${{ env.FAIL_ON_CVSS }}
+
+      - name: Summary
+        if: ${{ always() && env.NVD_API_KEY != '' }}
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          p = "springboot3-blog/target/dependency-check-report.json"
+          if not os.path.exists(p):
+              raise SystemExit
+          sev = {}
+          for dep in json.load(open(p, encoding="utf-8")).get("dependencies", []):
+              for v in dep.get("vulnerabilities") or []:
+                  s = (v.get("severity") or "UNKNOWN").upper()
+                  sev[s] = sev.get(s, 0) + 1
+          print("### OWASP dependency-check (backend)")
+          print(", ".join(f"{k}: {sev[k]}" for k in sorted(sev)) or "no vulnerabilities found")
+          EOF
+
+      - name: Upload report
+        if: ${{ always() && env.NVD_API_KEY != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: springboot3-blog/target/dependency-check-report.*
+          if-no-files-found: ignore
