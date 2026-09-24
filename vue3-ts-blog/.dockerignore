@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-ssr
+*.log
+.git
+.idea
+.vscode
+cypress/videos
+cypress/screenshots
+cypress/downloads

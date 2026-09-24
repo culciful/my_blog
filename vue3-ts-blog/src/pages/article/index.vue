@@ -114,7 +114,7 @@ const { proxy }: any = getCurrentInstance();
 const { t } = i18n.global as any;
 
 
-let article = reactive({
+let article = reactive<Record<string, any>>({
     [ArticleConstant.articleId]: 0,
     [ArticleConstant.author]: {},
     [ArticleConstant.title]: '',
@@ -220,12 +220,12 @@ interface anchor {
     lineIndex: string,
     indent:number
 }
-const titles: Ref<[anchor]> = ref([]);
+const titles: Ref<anchor[]> = ref([]);
 const previewRef = ref();
 const contentScrollRef = ref();
 const getAnchors = () => {
     if(!previewRef.value) return;
-    const anchors = previewRef.value.$el.querySelectorAll('h1,h2,h3,h4,h5,h6');
+    const anchors: NodeListOf<HTMLElement> = previewRef.value.$el.querySelectorAll('h1,h2,h3,h4,h5,h6');
     const tempTitles = Array.from(anchors).filter((title) => !!title.innerText.trim());
 
     if (!tempTitles.length) {

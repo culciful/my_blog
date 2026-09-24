@@ -122,7 +122,7 @@ const handleChange: UploadProps['onChange'] = (uploadFile) => {
     }
 };
 
-const preview = ref({
+const preview = ref<Record<string, any>>({
     url: ''
 });
 const previewStyle = ref({});

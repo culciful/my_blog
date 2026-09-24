@@ -23,6 +23,13 @@ const showErrorMessage = (errorCode: number, fallbackMessage?: string) => {
     ElMessage.error(message === key ? fallbackMessage || message : message);
 };
 
+/** 后端统一响应体：errorCode 为 0 才会 resolve，其余走 reject，所以 then 里拿到的一定是成功响应 */
+export interface ApiResponse<T = any> {
+    errorCode: number;
+    result: T;
+    message?: string;
+}
+
 /** 代理目标见 vite.config 中 loadEnv 的 VITE_PROXY_TARGET；API 根见 VITE_API_BASE */
 const defaultConfig = {
     baseURL,
@@ -75,12 +82,12 @@ axiosInstance.interceptors.response.use(
     }
 );
 
-function get(
+function get<T = any>(
     url: string,
     params: Record<string, unknown> = {},
     config: AxiosRequestConfig | null = null
   ) {
-    return new Promise((resolve, reject) => {
+    return new Promise<ApiResponse<T>>((resolve, reject) => {
       const mergedParams = { ...(config?.params ?? {}), ...params };
       const axiosConfig: AxiosRequestConfig = { ...(config ?? {}), params: mergedParams };
   
@@ -95,12 +102,12 @@ function get(
     });
   }
 
-function post(
+function post<T = any>(
     url: string,
     data: unknown = {},
     config: AxiosRequestConfig | null = null
 ) {
-    return new Promise((resolve, reject) => {
+    return new Promise<ApiResponse<T>>((resolve, reject) => {
         axiosInstance.post(url, data, config ?? undefined).then( res => {
             const errorCode = (res.data || {}).errorCode;
             if(errorCode === 0) resolve(res.data);
@@ -114,12 +121,12 @@ function post(
     });
 }
 
-function put(
+function put<T = any>(
     url: string,
     data: unknown = {},
     config: AxiosRequestConfig | null = null
 ) {
-    return new Promise((resolve, reject) => {
+    return new Promise<ApiResponse<T>>((resolve, reject) => {
         axiosInstance.put(url, data, config ?? undefined).then(res => {
             const errorCode = (res.data || {}).errorCode;
             if (errorCode === 0) resolve(res.data);
@@ -133,12 +140,12 @@ function put(
     });
 }
 
-function patch(
+function patch<T = any>(
     url: string,
     data: unknown = {},
     config: AxiosRequestConfig | null = null
 ) {
-    return new Promise((resolve, reject) => {
+    return new Promise<ApiResponse<T>>((resolve, reject) => {
         axiosInstance.patch(url, data, config ?? undefined).then(res => {
             const errorCode = (res.data || {}).errorCode;
             if (errorCode === 0) resolve(res.data);
@@ -152,11 +159,11 @@ function patch(
     });
 }
 
-function del(
+function del<T = any>(
     url: string,
     config: AxiosRequestConfig | null = null
 ) {
-    return new Promise((resolve, reject) => {
+    return new Promise<ApiResponse<T>>((resolve, reject) => {
         axiosInstance.delete(url, config ?? undefined).then(res => {
             const errorCode = (res.data || {}).errorCode;
             if (errorCode === 0) resolve(res.data);

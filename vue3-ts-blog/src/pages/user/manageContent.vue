@@ -104,7 +104,7 @@ const userStore = useUserStore();
 const isVisitMode = ref(false);
 const userNotFound = ref(false);
 const isTargetDeleted = ref(false);
-let userInfo = reactive({
+let userInfo = reactive<Record<string, any>>({
     [Constant.userId]: userStore.id,
     [Constant.username]: userStore.username,
     [Constant.avatarUrl]: userStore.avatarUrl

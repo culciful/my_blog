@@ -86,7 +86,7 @@ const routes = [
     }
 ];
 
-const router = createRouter<RouterOptions>({
+const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes
 } as RouterOptions);
