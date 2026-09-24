@@ -1,0 +1,2 @@
+# 本地 docker-compose 的真实密钥/密码，复制自 .env.example
+.env
