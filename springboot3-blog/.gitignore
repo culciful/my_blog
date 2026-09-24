@@ -1,0 +1,22 @@
+.idea/
+.vscode/
+*.iml
+
+target/
+out/
+*.class
+*.jar
+
+logs/
+*.log
+
+# 本地文件上传目录（头像 / 正文图片）
+uploads/
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+

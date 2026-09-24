@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.culciful.mapper.TextBodyMapper">
+
+    <resultMap id="BaseResultMap" type="com.culciful.pojo.TextBody">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="textId" column="text_id" jdbcType="INTEGER"/>
+            <result property="body" column="body" jdbcType="VARCHAR"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,text_id,body,
+        is_deleted
+    </sql>
+</mapper>

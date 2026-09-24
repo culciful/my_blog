@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">  
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <!-- 2026-09-12：3.2.0（2023 年底）→ 3.5.16（当前最新 3.x），dependency-check 扫出
+         spring-core/tomcat-embed-core/spring-security-core 累计 91 个 CVE，绝大多数靠这次
+         升级随 BOM 一起清掉，不逐个手动追版本 -->
+    <version>3.5.16</version>
+  </parent>
+
+  <groupId>com.culciful</groupId>
+  <artifactId>springboot3-blog</artifactId>  
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- mybatis-plus  -->
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-boot-starter</artifactId>
+      <version>3.5.17</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>mybatis-spring</artifactId>
+          <groupId>org.mybatis</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- 3.5.9 起 PaginationInnerInterceptor/BlockAttackInnerInterceptor 从 mybatis-plus-extension
+         拆到这个独立模块（脱钩 JSqlParser 版本），Main.java 里配分页/防全表更新插件要用 -->
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-jsqlparser</artifactId>
+      <version>3.5.17</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mybatis</groupId>
+      <artifactId>mybatis-spring</artifactId>
+      <version>3.0.3</version>
+    </dependency>
+
+    <!-- 数据库相关配置启动器 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+
+    <!-- druid启动器的依赖  -->
+    <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>druid-spring-boot-3-starter</artifactId>
+      <version>1.2.28</version>
+    </dependency>
+
+    <!-- 驱动类：不锁版本，交给 spring-boot-dependencies BOM 管（3.5.16 管到 9.7.0），
+         修 CVE-2023-22102；也避免以后忘了手动跟进 -->
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+    </dependency>
+
+    <!-- 版本不锁，交给 BOM 管（3.5.16 管到 1.18.46）：1.18.28 太老，跟这次升级带来的更新
+         的 maven-compiler-plugin/javac 不兼容，annotation processing 直接不生效，
+         getter/setter 全部找不到符号，编译报一整屏错误 -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-generator</artifactId>
+      <version>3.5.17</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.freemarker</groupId>
+      <artifactId>freemarker</artifactId>
+      <version>2.3.32</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- jjwt 0.12.x：新 API（builder/parser 用 verifyWith/signWith(Key) 而非字符串密钥），
+         不再依赖 javax.xml.bind.DatatypeConverter，JAXB 兼容包随之整个移除 -->
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+      <version>0.12.7</version>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-impl</artifactId>
+      <version>0.12.7</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-jackson</artifactId>
+      <version>0.12.7</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.alibaba.fastjson2</groupId>
+      <artifactId>fastjson2</artifactId>
+      <version>2.0.45</version>
+    </dependency>
+
+    <!-- 登录失败限流：内存计数（版本由 spring-boot 父 POM 管理） -->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
+    <!-- 邮箱验证码发信；未配置 spring.mail.host 时自动降级为打日志 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+
+  </dependencies>
+
+  <!--    SpringBoot应用打包插件-->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- 依赖漏洞扫描，按需手动跑：mvn dependency-check:check -DnvdApiKey=xxx，不绑定到
+           verify/install，避免拖慢日常 mvn test/mvn spring-boot:run。报告出在
+           target/dependency-check-report.html。
+           ⚠️ 13.0.0 实测：NVD API key 是硬性必需，不传直接报错退出（Invalid API Key，
+           而不是退化成慢速匿名模式）——免费申请：https://nvd.nist.gov/developers/request-an-api-key
+           （提交邮箱即可，一般很快到邮箱）。 -->
+      <plugin>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <version>13.0.0</version>
+        <configuration>
+          <formats>
+            <format>HTML</format>
+            <format>JSON</format>
+          </formats>
+          <suppressionFiles>
+            <suppressionFile>dependency-check-suppressions.xml</suppressionFile>
+          </suppressionFiles>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

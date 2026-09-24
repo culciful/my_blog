@@ -1,0 +1,56 @@
+# =========================
+# Local runnable + secure defaults
+# Use env vars in production to avoid secret leakage.
+# Profiles: dev (Vite cross-port + CORS), prod (HTTPS cookie, tighten CORS).
+# =========================
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+spring:
+  profiles:
+    default: dev
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/culciful_blog}
+      username: ${DB_USERNAME:root}
+      password: ${DB_PASSWORD:root}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  type-aliases-package: com.culciful.pojo
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      id-type: input
+  configuration:
+    # local debugging can keep SQL logs; override in prod if needed
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+jwt:
+  token:
+    # token lifetime in minutes; default 30 days. Active users get a sliding
+    # renewal, so only idle sessions past this window must log in again.
+    tokenExpiration: ${JWT_TOKEN_EXPIRATION:43200}
+    # HS512 signing key: no default. Production MUST inject JWT_TOKEN_SIGN_KEY
+    # (openssl rand -hex 64); JwtHelper rejects startup if it is < 64 chars.
+    # The fixed local-dev key lives in application-dev.yaml.
+    tokenSignKey: ${JWT_TOKEN_SIGN_KEY:}
+  cookie:
+    name: ${JWT_COOKIE_NAME:BLOG_TOKEN}
+    path: /
+    same-site: Strict
+
+# Cross-origin allowlist (dev). Prod same-site: keep empty -- see application-prod.yaml.
+blog:
+  cors:
+    allowed-origins: []
+  # Login failure throttle: count by username+IP, lock after max-attempts
+  # consecutive failures for lock-duration.
+  login-rate-limit:
+    enabled: ${LOGIN_RATE_LIMIT_ENABLED:true}
+    max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
+    lock-duration: ${LOGIN_LOCK_DURATION:15m}
