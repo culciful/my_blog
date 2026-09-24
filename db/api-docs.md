@@ -67,7 +67,7 @@
 | `/user/getFollowers` | POST | 分页查询粉丝列表 | `follow.vue` |
 | `/user/sendEmailCode` | POST | 发送邮箱验证码（`scene`: register/reset/update_email） | `register.vue`、`forgetPassword.vue`、`userCenter.vue` |
 | `/user/checkEmailCode` | POST | 校验邮箱验证码（不消费） | `forgetPassword.vue` |
-| `/user/uploadAvatar` | POST（form-data） | 上传头像（`file` 或 base64 `image`），需登录 | `uploadAvatar.vue` |
+| `/user/uploadAvatar` | POST（form-data） | 上传头像（`file` 或 base64 `image`），需登录；成功后清掉旧头像的 `file_asset` 行 + 磁盘文件 | `uploadAvatar.vue` |
 | `/user/checkHasFollow` | GET `?id=` | 查询对目标用户的关注状态 → `{ isFollowing }` | `manageContent.vue` |
 | `/user/switchFollow` | POST | 关注/取关，body `{ id, shouldFollow }` | `manageContent.vue`、`follow.vue` |
 | `/user/getPackages` | GET `?id=` | 用户的文章分组列表 → `{ list: [{ pid, pname }] }` | `addArticle.vue`、`manageContent.vue` |
@@ -116,7 +116,7 @@
 | 接口 | 方法 | 说明 | 主要调用 |
 |---|---|---|---|
 | `/article/getArticleList` | POST | 分页检索文章（仅 `status=published`） | `article/components/list.vue` |
-| `/article/getArticleInfo` | GET `?aid=` | 单篇详情（并浏览量 +1）；草稿一律 404 | `article/index.vue`、`addArticle.vue` |
+| `/article/getArticleInfo` | GET `?aid=` | 单篇详情（并浏览量 +1，同一 IP 对同一篇文章 10 分钟内去重只计一次，`blog.article-view.*` 可调）；草稿一律 404 | `article/index.vue`、`addArticle.vue` |
 | `/article/addArticle` | POST | 新建文章（直接发布）→ `{ id }` | `addArticle.vue` |
 | `/article/editArticle` | POST | 编辑文章，body 含 `aid` → `{ id }`。目标是草稿行时＝发布该草稿（`status→published`、发布时间取现在） | `addArticle.vue` |
 | `/article/saveDraft` | POST | 保存草稿：无 `aid` 新建、有 `aid` 更新自己的草稿 → `{ id }`。需登录。只校验标题非空（≤64），正文/分组/标签/摘要都可空。草稿不计入文章数统计 | `addArticle.vue` |
@@ -132,7 +132,7 @@
 排序：带 `filter.id`（内容管理 / 个人空间）→ 按 `created_at` 倒序；不带（主页 feed）→ 按 `last_active_at` 倒序（发布 / 编辑正文 / 收到新评论都会刷新 `last_active_at`，把文章顶上来）。
 `coverUrl`：正文第一张图（`ArticleCover.firstImage`，只认 markdown `![](url)`，跳过代码块/公式块），发布/编辑正文时重算；没图为 `null`。主页列表用它渲染缩略图。
 
-`getArticleInfo` 返回（在列表项基础上多）：`{ ...列表项, updateTime, content, isCustomAbstract, pid, package:{pid,pname}, tags:string[], comments:{list,total} }`
+`getArticleInfo` 返回（在列表项基础上多）：`{ ...列表项, updateTime, content, isCustomAbstract, pid, package:{pid,pname}, tags:string[] }`（评论列表走独立的 `POST /comment/getComments`，不在这个接口里，`commentCount` 已经在列表项字段里）
 > `updateTime` = 文章最后编辑时间（秒）。浏览量自增不会改动它；仅 `editArticle` 会。
 > 前端判定「编辑过」：`updateTime - createTime > 60`。
 > `isCustomAbstract` = `abstract` 是否作者自填。前端编辑页据此决定是否把 `abstract` 回填到输入框（自动生成的不回填，留空 = 继续自动）。
