@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   compose-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:
@@ -41,7 +41,7 @@ jobs:
       JWT_TOKEN_SIGN_KEY: ci-only-jwt-signing-key-not-a-secret-0123456789-abcdefghijklmnopqrstuvwxyz
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build images
         run: docker compose build

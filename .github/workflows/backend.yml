@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     services:
@@ -51,14 +51,14 @@ jobs:
       JWT_TOKEN_SIGN_KEY: ci-only-jwt-signing-key-not-a-secret-0123456789-abcdefghijklmnopqrstuvwxyz
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Load schema (db/blog.sql)
         env:
           MYSQL_PWD: ci-root-pw
         run: mysql -h 127.0.0.1 -uroot < db/blog.sql
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload surefire reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: surefire-reports
           path: springboot3-blog/target/surefire-reports
