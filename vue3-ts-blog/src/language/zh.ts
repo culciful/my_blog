@@ -79,7 +79,7 @@ export default {
         inputNewPassword: '请输入新密码',
         confirmNewPassword: '请再次输入新密码',
         inputEmail: '请输入邮箱',
-        usernameFormat: '用户名由1到20位字符组成，且不能包含 @',
+        usernameFormat: '用户名由1到20位字符组成，且不能包含 {\'@\'}',
         passwordFormat: '密码由8到64位字符组成，且必须包含字母',
         emailFormat: '邮箱格式错误',
         inputComment: '输入评论...',

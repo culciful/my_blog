@@ -79,7 +79,7 @@ export default {
         inputNewPassword: 'please enter new password',
         confirmNewPassword: 'please confirm new password',
         inputEmail: 'please enter email',
-        usernameFormat: 'Username must be 1-20 characters and cannot contain @',
+        usernameFormat: 'Username must be 1-20 characters and cannot contain {\'@\'}',
         passwordFormat: 'Password must be 8-64 characters and contain at least one letter',
         emailFormat: 'email format error',
         inputComment: 'Enter a comment...',
