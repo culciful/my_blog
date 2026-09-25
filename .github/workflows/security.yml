@@ -22,9 +22,11 @@ on:
       - "vue3-ts-blog/package-lock.json"
       - ".github/workflows/security.yml"
 
+# 不能 cancel-in-progress：首次同步 NVD 要跑两个多小时，中途被新一次触发（比如改了 pom.xml）
+# 取消掉的话，缓存没存下来，下次又从头开始。排队等着就行。
 concurrency:
   group: dependency-scan
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -63,7 +65,11 @@ jobs:
 
   maven-dependency-check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # 首次要同步完整的 NVD 数据（约 39.7 万条）。实测 GitHub 的机器上每小时只能拉下 19 万条左右
+    # （NVD 接口本身就慢），完整同步要两个多小时；设成 60 分钟时只跑到 48% 就超时被取消，
+    # 而缓存只在任务成功时才保存，之后每次都会从头再来、永远跑不完。
+    # 所以给足余量（GitHub 单个任务最长 6 小时）。缓存存下来之后，每周只拉增量，几分钟就完事。
+    timeout-minutes: 300
     env:
       # 在仓库 Settings -> Secrets and variables -> Actions 里新建 NVD_API_KEY。
       # 免费申请：https://nvd.nist.gov/developers/request-an-api-key
@@ -84,7 +90,9 @@ jobs:
           cache: maven
           cache-dependency-path: springboot3-blog/pom.xml
 
-      # 首次要同步完整 NVD 数据（几分钟到十几分钟），缓存起来之后每次只拉增量
+      # 首次要同步完整 NVD 数据（两个多小时，见上面 timeout-minutes 的说明）。
+      # 缓存只在任务成功结束时才保存，所以第一次必须跑完；之后每次只拉增量。
+      # key 带 run_id 是为了每次成功后都存一份新的，restore-keys 按前缀取最近的一份
       - uses: actions/cache@v6
         if: ${{ env.NVD_API_KEY != '' }}
         with:
